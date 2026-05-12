@@ -1,5 +1,7 @@
 ## Upcoming
 
+- fix(chart): restore desktop hover scrub (playhead follows mouse without holding a button) after native pointer refactor
+
 ## 0.2.0
 
 - feat(mobile): responsive chart — under 640px, full-width plot with horizontal LUFS window below, taller plot height (`clamp` + `svh`), tighter `#root` padding
