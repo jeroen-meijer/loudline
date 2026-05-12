@@ -1,34 +1,38 @@
 # Loudline
 
-Offline loudness metering in the browser: drag an audio file, see momentary / short-term LUFS over time (via [loudness-worklet](https://www.npmjs.com/package/loudness-worklet)), program integrated / LRA / true peak, waveform backdrop, and Space-to-preview playback.
+Offline EBU R128 loudness metering in the browser. Drag in an audio file and get momentary / short-term LUFS over time, integrated LUFS, LRA, max true peak, a waveform backdrop, and Space-to-preview playback. All decoding and analysis happens locally — no upload.
 
-## Develop
+Live site: `https://jeroen-meijer.github.io/loudline/`
+
+## Tech Stack
+
+- React 19 + TypeScript + Vite
+- [`loudness-worklet`](https://www.npmjs.com/package/loudness-worklet) — EBU R128 / ITU-R BS.1770-5 analysis via `AudioWorkletNode`
+- Web Audio API (`OfflineAudioContext` for analysis + 48 kHz normalization, `AudioContext` for preview)
+- Recharts for the loudness graph
+- Bun for tooling
+- GitHub Pages deployment via GitHub Actions
+
+## Common Commands
 
 ```bash
 bun install
-bun run dev
-```
-
-## Build
-
-```bash
-bun run build
-```
-
-Preview production build:
-
-```bash
-bun run preview
+bun run dev          # http://localhost:5173
+bun run lint
+bun run build        # tsc -b && vite build
+bun run preview      # http://localhost:4173 (production bundle)
 ```
 
 ## GitHub Pages
 
-Set `VITE_BASE` to your repo path with slashes, e.g. `VITE_BASE=/loudline/` when building for `https://<user>.github.io/loudline/`. For root user pages (`username.github.io`), use `VITE_BASE=/`.
+CI sets `VITE_BASE_PATH=/<repo-name>/` automatically when building. For a local production build that matches the deployed path:
 
 ```bash
-VITE_BASE=/loudline/ bun run build
+VITE_BASE_PATH=/loudline/ bun run build && bun run preview
 ```
+
+For root user pages (`username.github.io`) leave `VITE_BASE_PATH` unset or set it to `/`.
 
 ## CSP / worklet loading
 
-`loudness-worklet` loads its processor via a `blob:` URL by default. If your host uses strict `Content-Security-Policy` that blocks `blob:` for worklets, vendor [`loudness.worklet.js` from upstream releases](https://github.com/lcweden/loudness-worklet/releases) into `public/` and adapt loading to `audioContext.audioWorklet.addModule('/loudness.worklet.js')` (see upstream README).
+`loudness-worklet` registers its processor via a `blob:` URL by default. If a host serves the site under a strict `Content-Security-Policy` that blocks `blob:` worklets, vendor [`loudness.worklet.js`](https://github.com/lcweden/loudness-worklet/releases) into `public/` and call `audioContext.audioWorklet.addModule('/loudness.worklet.js')` directly (see upstream README).
