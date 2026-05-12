@@ -1,17 +1,14 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
-// GitHub Pages project site: set VITE_BASE=/repo-name/ when building.
-function normalizeBase(raw: string | undefined): string {
+function pagesBase(): string {
+  const raw = process.env.VITE_BASE_PATH;
   if (!raw || raw === "/") return "/";
-  const trimmed = raw.trim();
-  const withLeading = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
+  const withLeading = raw.startsWith("/") ? raw : `/${raw}`;
   return withLeading.endsWith("/") ? withLeading : `${withLeading}/`;
 }
 
-const base = normalizeBase(process.env.VITE_BASE);
-
 export default defineConfig({
+  base: pagesBase(),
   plugins: [react()],
-  base,
 });
