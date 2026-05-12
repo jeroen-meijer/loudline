@@ -189,8 +189,6 @@ export function RangeBar({
     };
   }, [drag, fracToValue, max, min, minSpanResolved, onChange, pointerFrac]);
 
-  const fmt = formatValue ?? ((v: number) => v.toFixed(1));
-
   const wrapperStyle: React.CSSProperties = isHorizontal
     ? { display: "flex", alignItems: "center", gap: 8, width: "100%" }
     : { display: "flex", flexDirection: "column", alignItems: "center", gap: 8, height: "100%" };
@@ -212,10 +210,11 @@ export function RangeBar({
   ) : null;
 
   const valueChips = useMemo(() => {
+    const fmt = formatValue ?? ((v: number) => v.toFixed(1));
     const lo = fmt(Math.min(start, end));
     const hi = fmt(Math.max(start, end));
     return { lo, hi };
-  }, [end, fmt, start]);
+  }, [end, formatValue, start]);
 
   return (
     <div className={`range-bar ${orientation} ${className ?? ""}`} style={wrapperStyle}>
