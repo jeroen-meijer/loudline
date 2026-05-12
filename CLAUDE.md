@@ -44,6 +44,15 @@ VITE_BASE_PATH=/loudline/ bun run build && bun run preview
 - After non-trivial UI changes, smoke-test in the browser (drag a real file in, pan/zoom, hit Space).
 - Production behaviour can differ noticeably from dev for chart performance — prefer `bun run preview` over `bun run dev` when investigating lag.
 
+## Changelog Workflow
+
+- All user-visible changes go in `CHANGELOG.md` under `## Upcoming`.
+- New entries are added to the **top** of the `## Upcoming` list.
+- On release, `## Upcoming` becomes the new version heading and a fresh empty `## Upcoming` is added above it (same convention as `in_phase`).
+- Before committing:
+  - Run `bun run lint` and `bun run build`.
+  - Fix any errors and rerun until clean.
+
 ## Git Conventions
 
 Conventional commits, optional scope:
