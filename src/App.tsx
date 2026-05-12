@@ -29,6 +29,7 @@ export default function App() {
 
   const [timeRange, setTimeRange] = useState({ start: 0, end: 1 });
   const [fullScaleY, setFullScaleY] = useState(false);
+  const [manualYRange, setManualYRange] = useState<[number, number] | null>(null);
 
   const { isPlaying, toggle, stop } = usePreviewPlayback({
     buffer: result?.playbackBuffer ?? null,
@@ -65,13 +66,18 @@ export default function App() {
       }
       if (isChartHovered || isFileHovered) {
         e.preventDefault();
-        const start = isChartHovered && hoverTime != null ? hoverTime : 0;
+        // From file strip: always start at t=0.
+        // From chart: start at the hovered time (or last sticky cursor as a fallback).
+        let start = 0;
+        if (isChartHovered) {
+          start = hoverTime ?? stickyCursor ?? 0;
+        }
         void toggle(start);
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [state, result, isPlaying, isChartHovered, isFileHovered, hoverTime, toggle, stop]);
+  }, [state, result, isPlaying, isChartHovered, isFileHovered, hoverTime, stickyCursor, toggle, stop]);
 
   const handleFile = useCallback(async (f: File) => {
     setFile(f);
@@ -86,6 +92,7 @@ export default function App() {
       setResult(res);
       setTimeRange({ start: 0, end: res.duration });
       setStickyCursor(0);
+      setManualYRange(null);
       setState("done");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error");
@@ -160,6 +167,8 @@ export default function App() {
                 onTimeRangeChange={(start, end) => setTimeRange({ start, end })}
                 fullScaleY={fullScaleY}
                 onFullScaleYChange={setFullScaleY}
+                manualYRange={manualYRange}
+                onManualYRangeChange={setManualYRange}
                 onHoverTime={onChartHover}
                 isArmed={armedForStart && isChartHovered}
               />

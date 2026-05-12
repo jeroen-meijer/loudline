@@ -13,6 +13,13 @@
   --chart-brush: #1e2430;
   --playhead: #e8eaed;
   --waveform-stroke: #7a8599;
+  --axis-tick: #c7ccd3;
+  --axis-line: #404754;
+  --range-track: #1a1f28;
+  --range-window: rgba(90, 176, 255, 0.18);
+  --range-window-border: rgba(90, 176, 255, 0.55);
+  --range-handle: #5ab0ff;
+  --font-mono: ui-monospace, SFMono-Regular, "JetBrains Mono", Menlo, Consolas, monospace;
 }
 
 * {
@@ -77,7 +84,21 @@ body {
   padding: 2px 6px;
   border-radius: 4px;
   font-size: 11px;
-  font-family: ui-monospace, monospace;
+  font-family: var(--font-mono);
+}
+
+.link-btn {
+  border: none;
+  background: transparent;
+  color: var(--primary);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.link-btn:hover {
+  color: var(--foreground);
 }
 
 .transport-dot {
@@ -112,6 +133,46 @@ body {
   stroke: var(--border);
 }
 
-.recharts-default-tooltip {
-  border-radius: 8px !important;
+.recharts-cartesian-axis-tick text,
+.recharts-text {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Range bar (custom horizontal + vertical zoom/pan control) */
+.range-bar-track {
+  background: var(--range-track);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  user-select: none;
+  touch-action: none;
+}
+.range-bar-window {
+  background: var(--range-window);
+  border-top: 1px solid var(--range-window-border);
+  border-bottom: 1px solid var(--range-window-border);
+  cursor: grab;
+}
+.range-bar.vertical .range-bar-window {
+  border-top: none;
+  border-bottom: none;
+  border-left: 1px solid var(--range-window-border);
+  border-right: 1px solid var(--range-window-border);
+}
+.range-bar-window:active {
+  cursor: grabbing;
+}
+.range-bar-handle {
+  background: var(--range-handle);
+  width: 4px;
+  border-radius: 2px;
+  cursor: ew-resize;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.45);
+}
+.range-bar.vertical .range-bar-handle {
+  width: auto;
+  height: 4px;
+  cursor: ns-resize;
+}
+.range-bar-handle:hover {
+  background: color-mix(in srgb, var(--range-handle) 80%, white);
 }
