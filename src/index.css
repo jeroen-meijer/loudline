@@ -1,0 +1,117 @@
+:root {
+  color-scheme: dark;
+  --background: #0b0d10;
+  --foreground: #e8eaed;
+  --muted-foreground: #9aa0a6;
+  --card: #12151b;
+  --border: #2a3038;
+  --primary: #5ab0ff;
+  --destructive: #ff6b6b;
+  --chart-momentary: #5ab0ff;
+  --chart-short-term: #f5c84c;
+  --chart-integrated: #9aa0a6;
+  --chart-brush: #1e2430;
+  --playhead: #e8eaed;
+  --waveform-stroke: #7a8599;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family:
+    system-ui,
+    -apple-system,
+    Segoe UI,
+    Roboto,
+    Ubuntu,
+    sans-serif;
+  background: var(--background);
+  color: var(--foreground);
+}
+
+#root {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 32px 20px 48px;
+}
+
+.app-root {
+  min-height: 80vh;
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.file-strip.armed,
+.loudness-chart-wrap.armed {
+  outline: 2px solid color-mix(in srgb, var(--primary) 55%, transparent);
+  outline-offset: 2px;
+  border-radius: 10px;
+}
+
+.btn {
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--foreground);
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+}
+.btn:hover {
+  border-color: var(--primary);
+}
+.btn.ghost {
+  background: transparent;
+}
+
+.kbd {
+  border: 1px solid var(--border);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-family: ui-monospace, monospace;
+}
+
+.transport-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--primary);
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--muted-foreground);
+  user-select: none;
+}
+
+.recharts-cartesian-grid-horizontal line,
+.recharts-cartesian-grid-vertical line {
+  stroke: var(--border);
+}
+
+.recharts-default-tooltip {
+  border-radius: 8px !important;
+}
