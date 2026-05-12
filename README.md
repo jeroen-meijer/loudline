@@ -1,5 +1,13 @@
 # Loudline
 
+**Instantly analyze the loudness of your audio files before you hit play. Drop a track and get a full LUFS graph.**
+
+[**Try it out**](https://jeroen-meijer.github.io/loudline/)
+
+<p align="center">
+  <img src="docs/screenshot.png" alt="Loudline analyzing an audio file: momentary and short-term LUFS curve over time, integrated / LRA / true peak summary, waveform backdrop, and zoom controls." width="820" />
+</p>
+
 > **AI-generated:** This app was fully coded by AI (Claude by Anthropic).
 
 Offline EBU R128 loudness metering in the browser. Drag in an audio file and get momentary / short-term LUFS over time, integrated LUFS, LRA, max true peak, a waveform backdrop, and Space-to-preview playback. All decoding and analysis happens locally — no upload.

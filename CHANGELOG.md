@@ -1,5 +1,9 @@
 ## Upcoming
 
+- docs: add app screenshot at the top of the README
+- feat: add tagline ("Instantly analyze the loudness of your audio files before you hit play. Drop a track and get a full LUFS graph.") to README
+- feat: add social metadata (`description`, Open Graph, Twitter) for rich link previews
+
 ## 0.1.0
 
 - feat: initial Loudline app — drag-and-drop offline loudness metering with `loudness-worklet` (momentary, short-term, integrated, LRA, max true peak)
