@@ -50,6 +50,8 @@ const PLOT_PADDING = {
 } as const;
 const Y_AXIS_WIDTH = 44;
 const X_AXIS_HEIGHT = 30;
+/** Viewport at or below this width uses stacked chart + full-width LUFS bar. */
+const MOBILE_MAX_WIDTH_PX = 640;
 const MIN_TIME_SPAN = 0.5;
 const MIN_LUFS_SPAN = 3;
 const ABS_Y_MIN = -70;
@@ -78,6 +80,9 @@ interface ChartCoreProps {
   yDomain: [number, number];
   yTicks: number[];
   integrated: number;
+  yAxisWidth: number;
+  tickFontSize: number;
+  xAxisHeight: number;
 }
 
 /**
@@ -90,6 +95,9 @@ const ChartCore = memo(function ChartCore({
   yDomain,
   yTicks,
   integrated,
+  yAxisWidth,
+  tickFontSize,
+  xAxisHeight,
 }: ChartCoreProps) {
   return (
     <ResponsiveContainer width="100%" height="100%">
@@ -102,10 +110,10 @@ const ChartCore = memo(function ChartCore({
           dataKey="time"
           domain={xDomain}
           allowDataOverflow
-          height={X_AXIS_HEIGHT}
+          height={xAxisHeight}
           tickFormatter={(v) => formatTime(v as number)}
           stroke="var(--axis-line)"
-          tick={{ fill: "var(--axis-tick)", fontSize: 11, fontFamily: FONT_MONO }}
+          tick={{ fill: "var(--axis-tick)", fontSize: tickFontSize, fontFamily: FONT_MONO }}
           tickLine={false}
           interval="preserveStartEnd"
         />
@@ -114,9 +122,9 @@ const ChartCore = memo(function ChartCore({
           ticks={yTicks}
           tickFormatter={(v) => `${v}`}
           stroke="var(--axis-line)"
-          tick={{ fill: "var(--axis-tick)", fontSize: 11, fontFamily: FONT_MONO }}
+          tick={{ fill: "var(--axis-tick)", fontSize: tickFontSize, fontFamily: FONT_MONO }}
           tickLine={false}
-          width={Y_AXIS_WIDTH}
+          width={yAxisWidth}
           allowDataOverflow
         />
         <ReferenceLine
@@ -171,6 +179,22 @@ export function LoudnessChart({
   const plotBoxRef = useRef<HTMLDivElement>(null);
   const [plotBox, setPlotBox] = useState({ width: 0, height: 0 });
 
+  const [compact, setCompact] = useState(() =>
+    typeof window !== "undefined" && window.matchMedia(`(max-width: ${MOBILE_MAX_WIDTH_PX}px)`).matches,
+  );
+
+  useEffect(() => {
+    const mq = window.matchMedia(`(max-width: ${MOBILE_MAX_WIDTH_PX}px)`);
+    const onChange = () => setCompact(mq.matches);
+    onChange();
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+
+  const xAxisPixels = compact ? 34 : X_AXIS_HEIGHT;
+  const yAxisW = compact ? 34 : Y_AXIS_WIDTH;
+  const tickFs = compact ? 12 : 11;
+
   // Measure the inner plot container so we can map clientX <-> seconds.
   useLayoutEffect(() => {
     const el = plotBoxRef.current;
@@ -211,11 +235,11 @@ export function LoudnessChart({
   );
 
   // ---- Time <-> pixel helpers ----
-  const plotLeftPx = Y_AXIS_WIDTH + PLOT_PADDING.left;
+  const plotLeftPx = yAxisW + PLOT_PADDING.left;
   const plotRightPx = Math.max(plotLeftPx, plotBox.width - PLOT_PADDING.right);
   const plotWidthPx = Math.max(1, plotRightPx - plotLeftPx);
   const plotTopPx = PLOT_PADDING.top;
-  const plotBottomPx = Math.max(plotTopPx, plotBox.height - PLOT_PADDING.bottom);
+  const plotBottomPx = Math.max(plotTopPx, plotBox.height - xAxisPixels);
   const plotInnerHeightPx = Math.max(1, plotBottomPx - plotTopPx);
 
   const tSpan = Math.max(1e-6, timeRange.end - timeRange.start);
@@ -262,24 +286,6 @@ export function LoudnessChart({
     };
   }, []);
 
-  const handlePointerMove = useCallback(
-    (e: React.PointerEvent) => {
-      const el = plotBoxRef.current;
-      if (!el) return;
-      const r = el.getBoundingClientRect();
-      const x = e.clientX - r.left;
-      if (x < plotLeftPx || x > plotRightPx) {
-        queueHover(null, null);
-        return;
-      }
-      queueHover(x, xToTime(x));
-    },
-    [plotLeftPx, plotRightPx, queueHover, xToTime],
-  );
-  const handlePointerLeave = useCallback(() => {
-    queueHover(null, null);
-  }, [queueHover]);
-
   // ---- Wheel: zoom + pan, rAF-coalesced ----
   // Refs hold the "live" target ranges so multiple wheel events in the same
   // frame accumulate, but React only re-renders once per frame.
@@ -307,6 +313,198 @@ export function LoudnessChart({
       wheelRafRef.current = requestAnimationFrame(flushWheel);
     }
   }, [flushWheel]);
+
+  const fullScaleYRef = useRef(fullScaleY);
+  const autoYRef = useRef(autoY);
+  const onFullScaleYChangeRef = useRef(onFullScaleYChange);
+  useEffect(() => {
+    fullScaleYRef.current = fullScaleY;
+  }, [fullScaleY]);
+  useEffect(() => {
+    autoYRef.current = autoY;
+  }, [autoY]);
+  useEffect(() => {
+    onFullScaleYChangeRef.current = onFullScaleYChange;
+  }, [onFullScaleYChange]);
+
+  const pointersRef = useRef(new Map<number, { x: number; y: number }>());
+  const pinchRef = useRef<
+    | {
+        mode: "time";
+        d0: number;
+        span0: number;
+        anchorFrac: number;
+        start0: number;
+        end0: number;
+      }
+    | { mode: "y"; d0: number; span0: number; mid: number; ymin0: number; ymax0: number }
+    | null
+  >(null);
+
+  // Native pointer events: two-finger pinch (time or LUFS) + single-finger scrub.
+  // iOS/Android do not emit wheel+ctrlKey for pinch on a div; this path mirrors desktop zoom.
+  useEffect(() => {
+    const el = plotBoxRef.current;
+    if (!el) return;
+
+    const pointers = pointersRef.current;
+    const pinch = pinchRef;
+
+    const syncPinchBase = () => {
+      if (pointers.size !== 2) {
+        pinch.current = null;
+        return;
+      }
+      const pts = [...pointers.values()];
+      const d0 = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+      if (d0 < 12) {
+        pinch.current = null;
+        return;
+      }
+      const r = el.getBoundingClientRect();
+      const midX = (pts[0].x + pts[1].x) / 2 - r.left;
+      const dx = pts[1].x - pts[0].x;
+      const dy = pts[1].y - pts[0].y;
+      const vertical = Math.abs(dy) > Math.abs(dx);
+      const live = liveTimeRangeRef.current;
+      const spanT = Math.max(1e-6, live.end - live.start);
+      const pl = plotLeftPx;
+      const pw = plotWidthPx;
+
+      if (vertical && !fullScaleYRef.current) {
+        const cur = liveManualYRef.current ?? autoYRef.current;
+        const ymin0 = cur[0];
+        const ymax0 = cur[1];
+        pinch.current = {
+          mode: "y",
+          d0,
+          span0: ymax0 - ymin0,
+          mid: (ymin0 + ymax0) / 2,
+          ymin0,
+          ymax0,
+        };
+        return;
+      }
+
+      const anchorFrac = clamp((midX - pl) / pw, 0, 1);
+      pinch.current = {
+        mode: "time",
+        d0,
+        span0: spanT,
+        anchorFrac,
+        start0: live.start,
+        end0: live.end,
+      };
+    };
+
+    const applyTimePinch = (d: number) => {
+      const p = pinch.current;
+      if (!p || p.mode !== "time") return;
+      const minSpan = Math.max(MIN_TIME_SPAN, duration / 5000);
+      const newSpan = clamp(p.span0 * (p.d0 / d), minSpan, duration);
+      const anchorTime = p.start0 + p.anchorFrac * p.span0;
+      let newStart = anchorTime - p.anchorFrac * newSpan;
+      let newEnd = newStart + newSpan;
+      if (newStart < 0) {
+        newEnd -= newStart;
+        newStart = 0;
+      }
+      if (newEnd > duration) {
+        newStart -= newEnd - duration;
+        newEnd = duration;
+      }
+      liveTimeRangeRef.current = {
+        start: Math.max(0, newStart),
+        end: Math.min(duration, newEnd),
+      };
+      scheduleFlush();
+    };
+
+    const applyYPinch = (d: number) => {
+      const p = pinch.current;
+      if (!p || p.mode !== "y") return;
+      if (fullScaleYRef.current) onFullScaleYChangeRef.current(false);
+      const newSpan = clamp(p.span0 * (p.d0 / d), MIN_LUFS_SPAN, ABS_Y_MAX - ABS_Y_MIN);
+      let lo = p.mid - newSpan / 2;
+      let hi = p.mid + newSpan / 2;
+      if (lo < ABS_Y_MIN) {
+        hi += ABS_Y_MIN - lo;
+        lo = ABS_Y_MIN;
+      }
+      if (hi > ABS_Y_MAX) {
+        lo -= hi - ABS_Y_MAX;
+        hi = ABS_Y_MAX;
+      }
+      liveManualYRef.current = [
+        clamp(lo, ABS_Y_MIN, ABS_Y_MAX - MIN_LUFS_SPAN),
+        clamp(hi, ABS_Y_MIN + MIN_LUFS_SPAN, ABS_Y_MAX),
+      ];
+      scheduleFlush();
+    };
+
+    const onDown = (e: PointerEvent) => {
+      if (e.pointerType === "mouse" && e.button !== 0) return;
+      pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (pointers.size === 2) syncPinchBase();
+    };
+
+    const onMove = (e: PointerEvent) => {
+      if (!pointers.has(e.pointerId)) return;
+      pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+      if (pointers.size === 2) {
+        if (!pinch.current) syncPinchBase();
+        if (pinch.current) {
+          e.preventDefault();
+          const pts = [...pointers.values()];
+          const d = Math.max(12, Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y));
+          if (pinch.current.mode === "time") applyTimePinch(d);
+          else applyYPinch(d);
+        }
+        return;
+      }
+
+      if (pointers.size === 1) {
+        const r = el.getBoundingClientRect();
+        const x = e.clientX - r.left;
+        if (x < plotLeftPx || x > plotRightPx) queueHover(null, null);
+        else queueHover(x, xToTime(x));
+      }
+    };
+
+    const clearPointer = (e: PointerEvent) => {
+      pointers.delete(e.pointerId);
+      if (pointers.size < 2) pinch.current = null;
+      if (pointers.size === 0) queueHover(null, null);
+    };
+
+    const onLeave = () => {
+      pointers.clear();
+      pinch.current = null;
+      queueHover(null, null);
+    };
+
+    el.addEventListener("pointerdown", onDown);
+    el.addEventListener("pointermove", onMove, { passive: false });
+    el.addEventListener("pointerup", clearPointer);
+    el.addEventListener("pointercancel", clearPointer);
+    el.addEventListener("pointerleave", onLeave);
+    return () => {
+      el.removeEventListener("pointerdown", onDown);
+      el.removeEventListener("pointermove", onMove);
+      el.removeEventListener("pointerup", clearPointer);
+      el.removeEventListener("pointercancel", clearPointer);
+      el.removeEventListener("pointerleave", onLeave);
+    };
+  }, [
+    duration,
+    plotLeftPx,
+    plotRightPx,
+    plotWidthPx,
+    queueHover,
+    scheduleFlush,
+    xToTime,
+  ]);
 
   useEffect(() => {
     return () => {
@@ -454,7 +652,7 @@ export function LoudnessChart({
       className={`loudness-chart-wrap${isArmed ? " armed" : ""}`}
       style={{ position: "relative" }}
     >
-      <div className="chart-controls" style={{ display: "flex", justifyContent: "flex-end", gap: 12, marginBottom: 8 }}>
+      <div className="chart-controls-row">
         <label className="toggle-label">
           <input
             type="checkbox"
@@ -475,22 +673,20 @@ export function LoudnessChart({
         )}
       </div>
 
-      <div style={{ display: "flex", gap: 8, alignItems: "stretch" }}>
+      <div className="chart-row">
         <div
           ref={plotBoxRef}
           className="chart-plot"
           style={{
             position: "relative",
             flex: 1,
-            height: 320,
+            minWidth: 0,
             background: "var(--card)",
             border: "1px solid var(--border)",
             borderRadius: 10,
             overflow: "hidden",
             touchAction: "none",
           }}
-          onPointerMove={handlePointerMove}
-          onPointerLeave={handlePointerLeave}
         >
           {/* Waveform backdrop — clipped to plot area */}
           <div
@@ -518,6 +714,9 @@ export function LoudnessChart({
             yDomain={yDomain}
             yTicks={yTicks}
             integrated={integrated}
+            yAxisWidth={yAxisW}
+            tickFontSize={tickFs}
+            xAxisHeight={xAxisPixels}
           />
 
           {/* Hover line */}
@@ -587,8 +786,8 @@ export function LoudnessChart({
           )}
         </div>
 
-        {/* Vertical LUFS range bar */}
-        <div style={{ width: 64, paddingTop: PLOT_PADDING.top, paddingBottom: X_AXIS_HEIGHT }}>
+        {/* Vertical LUFS bar — desktop / wide viewports */}
+        <div className="chart-lufs-side">
           <RangeBar
             orientation="vertical"
             direction="up"
@@ -604,8 +803,24 @@ export function LoudnessChart({
         </div>
       </div>
 
+      {/* Full-width LUFS window — narrow viewports (chart uses full width above) */}
+      <div className="chart-lufs-below">
+        <RangeBar
+          orientation="horizontal"
+          direction="right"
+          min={ABS_Y_MIN}
+          max={ABS_Y_MAX}
+          start={yDomain[0]}
+          end={yDomain[1]}
+          minSpan={MIN_LUFS_SPAN}
+          label="LUFS window"
+          formatValue={(v) => v.toFixed(0)}
+          onChange={onYBarChange}
+        />
+      </div>
+
       {/* Horizontal time range bar */}
-      <div style={{ marginTop: 12, paddingLeft: Y_AXIS_WIDTH }}>
+      <div className="chart-time-bar" style={{ marginTop: 12, paddingLeft: yAxisW }}>
         <RangeBar
           orientation="horizontal"
           direction="right"
@@ -621,17 +836,7 @@ export function LoudnessChart({
       </div>
 
       {/* Legend */}
-      <div
-        style={{
-          display: "flex",
-          gap: 16,
-          justifyContent: "center",
-          alignItems: "center",
-          marginTop: 8,
-          fontSize: 12,
-          color: "var(--muted-foreground)",
-        }}
-      >
+      <div className="chart-legend">
         <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
           <span style={{ width: 14, height: 2, background: "var(--chart-momentary)" }} />
           <span>Momentary</span>

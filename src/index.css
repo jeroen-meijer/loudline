@@ -46,6 +46,12 @@ body {
   padding: 32px 20px 48px;
 }
 
+@media (max-width: 640px) {
+  #root {
+    padding: 16px 12px 36px;
+  }
+}
+
 .app-root {
   min-height: 80vh;
 }
@@ -175,4 +181,160 @@ body {
 }
 .range-bar-handle:hover {
   background: color-mix(in srgb, var(--range-handle) 80%, white);
+}
+
+/* Loudness chart: responsive layout (stack LUFS under plot on phones) */
+.chart-controls-row {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px 12px;
+  margin-bottom: 8px;
+}
+
+.chart-row {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.chart-plot {
+  height: 320px;
+}
+
+.chart-lufs-side {
+  width: 64px;
+  flex-shrink: 0;
+  padding-top: 8px;
+  padding-bottom: 30px;
+}
+
+.chart-lufs-below {
+  display: none;
+  margin-top: 10px;
+}
+
+.chart-time-bar {
+  box-sizing: border-box;
+}
+
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  justify-content: center;
+  align-items: center;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+
+@media (max-width: 640px) {
+  .chart-row {
+    flex-direction: column;
+  }
+
+  .chart-plot {
+    width: 100%;
+    min-height: 260px;
+    height: clamp(268px, 48svh, 520px);
+  }
+
+  .chart-lufs-side {
+    display: none !important;
+  }
+
+  .chart-lufs-below {
+    display: block;
+  }
+
+  .chart-time-bar {
+    padding-left: 0 !important;
+    margin-top: 8px;
+  }
+}
+
+/* Meter cards: single column on narrow screens */
+.meter-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.meter-card-inner {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 640px) {
+  .meter-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .meter-card-inner {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Transport hints: keyboard vs touch */
+.transport-hints .hint-mobile {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .transport-hints .hint-desktop {
+    display: none;
+  }
+
+  .transport-hints .hint-mobile {
+    display: inline;
+  }
+}
+
+/* Fixed bottom playback — narrow viewports only */
+.mobile-transport-dock {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  main.main-with-mobile-dock {
+    padding-bottom: 88px;
+  }
+
+  .mobile-transport-dock {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    padding: 12px 20px calc(12px + env(safe-area-inset-bottom, 0px));
+    background: color-mix(in srgb, var(--card) 94%, transparent);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-top: 1px solid var(--border);
+    box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.35);
+  }
+
+  .mobile-transport-time {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--foreground);
+    min-width: 5.5em;
+  }
+
+  .mobile-transport-btn {
+    min-width: 120px;
+    min-height: 48px;
+    font-size: 16px;
+    padding: 12px 20px;
+    border-radius: 10px;
+  }
 }

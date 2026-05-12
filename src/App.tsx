@@ -5,6 +5,7 @@ import { LoudnessChart } from "./components/LoudnessChart";
 import { MeterDisplay } from "./components/MeterDisplay";
 import { AnalysisProgressDisplay } from "./components/AnalysisProgressDisplay";
 import { ErrorDisplay } from "./components/ErrorDisplay";
+import { MobileTransportDock } from "./components/MobileTransportDock";
 import { usePreviewPlayback } from "./hooks/usePreviewPlayback";
 import { decodeFileToBuffer } from "./lib/decodeAudio";
 import { analyzeFilePipeline } from "./lib/analyzeOffline";
@@ -114,6 +115,11 @@ export default function App() {
     if (t != null) setStickyCursor(t);
   }, []);
 
+  const handleMobileTransportToggle = useCallback(() => {
+    if (isPlaying) stop();
+    else void toggle(stickyCursor);
+  }, [isPlaying, stop, stickyCursor, toggle]);
+
   return (
     <div className="app-root">
       <header style={{ marginBottom: 24 }}>
@@ -126,7 +132,7 @@ export default function App() {
         </p>
       </header>
 
-      <main style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      <main className={state === "done" && result ? "main-with-mobile-dock" : undefined} style={{ display: "flex", flexDirection: "column", gap: 20 }}>
         {state === "idle" && <DropZone onFile={handleFile} />}
         {state === "processing" && <AnalysisProgressDisplay progress={progress} />}
         {state === "error" && error && <ErrorDisplay message={error} onRetry={reset} />}
@@ -185,6 +191,7 @@ export default function App() {
               shortTerm={valuesAtCursor.shortTerm}
             />
             <div
+              className="transport-hints"
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -193,14 +200,18 @@ export default function App() {
                 flexWrap: "wrap",
                 fontSize: 12,
                 color: "var(--muted-foreground)",
+                textAlign: "center",
               }}
             >
-              <span>Hover chart or file</span>
-              <span>·</span>
-              <span>
-                <kbd className="kbd">Space</kbd> play / stop
+              <span className="hint-desktop">
+                <span>Hover chart or file</span>
+                <span> · </span>
+                <span>
+                  <kbd className="kbd">Space</kbd> play / stop
+                </span>
+                <span> · </span>
               </span>
-              <span>·</span>
+              <span className="hint-mobile">Touch chart to scrub · Use bar below for play/pause · </span>
               <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 {isPlaying ? (
                   <>
@@ -215,6 +226,11 @@ export default function App() {
             <p style={{ margin: 0, fontSize: 12, color: "var(--muted-foreground)" }}>
               Large files are fully decoded in memory; very long masters may stress low-RAM devices.
             </p>
+            <MobileTransportDock
+              isPlaying={isPlaying}
+              timeSec={cursorTime ?? stickyCursor}
+              onToggle={handleMobileTransportToggle}
+            />
           </>
         )}
       </main>

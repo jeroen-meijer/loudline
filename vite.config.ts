@@ -11,4 +11,11 @@ function pagesBase(): string {
 export default defineConfig({
   base: pagesBase(),
   plugins: [react()],
+  // Allow `vite preview --host 0.0.0.0` behind ngrok / LAN hostnames (random *.ngrok-free.app per session).
+  preview: {
+    allowedHosts: true,
+  },
+  server: {
+    allowedHosts: true,
+  },
 });

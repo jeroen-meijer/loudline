@@ -58,18 +58,12 @@ export function MeterDisplay({
   const rate = `${(sampleRate / 1000).toFixed(1)} kHz`;
 
   return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "1fr 1fr",
-        gap: 16,
-      }}
-    >
+    <div className="meter-grid">
       <div className="card" style={{ padding: 16 }}>
         <div style={{ fontSize: 11, letterSpacing: "0.08em", color: "var(--muted-foreground)", marginBottom: 12 }}>
           PROGRAM
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+        <div className="meter-card-inner">
           <Cell label="INTEGRATED" value={formatLufs(integrated)} unit="LUFS" large />
           <Cell label="LRA" value={lra.toFixed(1)} unit="LU" />
           <Cell label="TRUE PEAK" value={formatDbtp(truePeakMax)} unit="dBTP" warn={truePeakMax > -1} />
@@ -83,7 +77,7 @@ export function MeterDisplay({
           AT PLAYHEAD
         </div>
         {momentary != null && shortTerm != null ? (
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+          <div className="meter-card-inner">
             <Cell label="MOMENTARY" value={formatLufs(momentary)} unit="LUFS" accent="momentary" />
             <Cell label="SHORT-TERM" value={formatLufs(shortTerm)} unit="LUFS" large accent="short" />
             <Cell label="TIMECODE" value={formatTime(cursorTime ?? 0)} />

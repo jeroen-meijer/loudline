@@ -1,8 +1,14 @@
 ## Upcoming
 
-- docs: add app screenshot at the top of the README
-- feat: add tagline ("Instantly analyze the loudness of your audio files before you hit play. Drop a track and get a full LUFS graph.") to README
-- feat: add social metadata (`description`, Open Graph, Twitter) for rich link previews
+## 0.2.0
+
+- feat(mobile): responsive chart — under 640px, full-width plot with horizontal LUFS window below, taller plot height (`clamp` + `svh`), tighter `#root` padding
+- feat(mobile): fixed bottom `MobileTransportDock` with Play/Pause and timecode (safe-area insets, blur strip); `main` bottom padding so scroll content clears the dock
+- feat(chart): two-finger pinch on the plot via Pointer Events — predominantly horizontal finger line zooms time; predominantly vertical line zooms the LUFS window (turns off full-scale Y when needed)
+- refactor(chart): native pointer listeners on the plot for unified scrub + pinch (replaces React-only pointer move/leave on the chart surface)
+- feat(ui): meter cards stack to one column on narrow screens; transport hints switch between desktop (hover + Space) and mobile copy
+- fix(dev): `preview.allowedHosts` and `server.allowedHosts` in Vite config so `vite preview --host 0.0.0.0` works behind ngrok and other tunnel hostnames
+- docs: README tagline, centered hero screenshot, and Open Graph / Twitter Card metadata for link previews
 
 ## 0.1.0
 
