@@ -449,6 +449,19 @@ export function LoudnessChart({
     };
 
     const onMove = (e: PointerEvent) => {
+      // Mouse (and pen) hover without a prior pointerdown: still emit scrub position.
+      // The pointers map is only filled on pointerdown; desktop hover used to work via
+      // React pointermove before we unified on native listeners.
+      const hoverOnlyMove =
+        (e.pointerType === "mouse" || e.pointerType === "pen") && e.buttons === 0;
+      if (hoverOnlyMove && pointers.size < 2) {
+        const r = el.getBoundingClientRect();
+        const x = e.clientX - r.left;
+        if (x < plotLeftPx || x > plotRightPx) queueHover(null, null);
+        else queueHover(x, xToTime(x));
+        return;
+      }
+
       if (!pointers.has(e.pointerId)) return;
       pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
 
