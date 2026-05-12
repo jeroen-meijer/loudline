@@ -62,13 +62,6 @@ body {
   border-radius: 10px;
 }
 
-.file-strip.armed,
-.loudness-chart-wrap.armed {
-  outline: 2px solid color-mix(in srgb, var(--primary) 55%, transparent);
-  outline-offset: 2px;
-  border-radius: 10px;
-}
-
 .btn {
   border: 1px solid var(--border);
   background: var(--card);
@@ -252,6 +245,36 @@ body {
   .chart-time-bar {
     padding-left: 0 !important;
     margin-top: 8px;
+  }
+}
+
+/* Desktop time-range selection (loudness chart) */
+.region-selection-layer {
+  transition: opacity 0.22s ease;
+  opacity: 1;
+}
+
+.region-selection-layer--exiting {
+  opacity: 0;
+}
+
+.region-selection-svg {
+  display: block;
+  overflow: visible;
+}
+
+.region-selection-rect {
+  fill: rgba(255, 255, 255, 0.09);
+  stroke: rgba(255, 255, 255, 0.88);
+  stroke-width: 2;
+  stroke-dasharray: 7 10;
+  animation: region-selection-dash 1.35s linear infinite;
+  vector-effect: non-scaling-stroke;
+}
+
+@keyframes region-selection-dash {
+  to {
+    stroke-dashoffset: -17;
   }
 }
 

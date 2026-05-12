@@ -4,7 +4,6 @@ interface FileStripProps {
   onReplace: () => void;
   onHoverEnter: () => void;
   onHoverLeave: () => void;
-  armed: boolean;
 }
 
 function fmtMb(n: number) {
@@ -17,11 +16,10 @@ export function FileStrip({
   onReplace,
   onHoverEnter,
   onHoverLeave,
-  armed,
 }: FileStripProps) {
   return (
     <div
-      className={`card file-strip ${armed ? "armed" : ""}`}
+      className="card file-strip"
       onMouseEnter={onHoverEnter}
       onMouseLeave={onHoverLeave}
       style={{

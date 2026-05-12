@@ -1,6 +1,11 @@
 ## Upcoming
 
+## 0.3.0
+
 - fix(chart): restore desktop hover scrub (playhead follows mouse without holding a button) after native pointer refactor
+- fix(ui): file-strip hover no longer snaps "At playhead" to t=0 / −70 LUFS; Space-from-file still starts at 0
+- fix(ui): remove Space-armed hover ring on file strip and chart (transport hints remain)
+- feat(chart): desktop drag-select time range — frosted readout (curve stats + debounced BS.1770 slice), marching dashed border, fade clear on outside click or time zoom
 
 ## 0.2.0
 

@@ -54,8 +54,6 @@ export default function App() {
     };
   }, [result, cursorTime]);
 
-  const armedForStart = (isChartHovered || isFileHovered) && !isPlaying;
-
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.code !== "Space") return;
@@ -144,13 +142,11 @@ export default function App() {
               onReplace={reset}
               onHoverEnter={() => {
                 setIsFileHovered(true);
-                setHoverTime(0);
               }}
               onHoverLeave={() => {
                 setIsFileHovered(false);
                 if (!isChartHoveredRef.current) setHoverTime(null);
               }}
-              armed={armedForStart && isFileHovered}
             />
             <div
               onMouseEnter={() => {
@@ -176,7 +172,7 @@ export default function App() {
                 manualYRange={manualYRange}
                 onManualYRangeChange={setManualYRange}
                 onHoverTime={onChartHover}
-                isArmed={armedForStart && isChartHovered}
+                playbackBuffer={result.playbackBuffer}
               />
             </div>
             <MeterDisplay
@@ -205,6 +201,8 @@ export default function App() {
             >
               <span className="hint-desktop">
                 <span>Hover chart or file</span>
+                <span> · </span>
+                <span>Drag on chart to select a time range</span>
                 <span> · </span>
                 <span>
                   <kbd className="kbd">Space</kbd> play / stop

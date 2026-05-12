@@ -19,8 +19,10 @@ import {
 import type { LoudnessPoint, WaveformBucket } from "../types";
 import { WaveformBackdrop } from "./WaveformBackdrop";
 import { RangeBar } from "./RangeBar";
+import { RegionSelectionReadout, type HeavyUiState } from "./RegionSelectionReadout";
 import { formatLufs, formatTime } from "../lib/format";
 import { yDomainFromLoudness, ticksForDomain, interpolateLoudnessAtTime } from "../lib/loudnessMath";
+import { analyzeRegionHeavy, computeQuickRegionStats } from "../lib/regionLoudnessStats";
 
 export interface LoudnessChartProps {
   data: LoudnessPoint[];
@@ -38,8 +40,8 @@ export interface LoudnessChartProps {
   onManualYRangeChange: (r: [number, number] | null) => void;
   /** Called on hover with seconds; null when the pointer leaves the plot. */
   onHoverTime: (t: number | null) => void;
-  /** Whether Space-to-play is currently armed for this chart. */
-  isArmed: boolean;
+  /** Post-normalization buffer; used for desktop selection loudness (worklet re-run). */
+  playbackBuffer: AudioBuffer | null;
 }
 
 const PLOT_PADDING = {
@@ -57,6 +59,9 @@ const MIN_LUFS_SPAN = 3;
 const ABS_Y_MIN = -70;
 const ABS_Y_MAX = 0;
 const FONT_MONO = "var(--font-mono)";
+const MIN_REGION_DRAG_PX = 6;
+const MIN_REGION_SEC = 0.08;
+const HEAVY_DEBOUNCE_MS = 380;
 
 function clamp(v: number, lo: number, hi: number): number {
   return Math.max(lo, Math.min(hi, v));
@@ -173,7 +178,7 @@ export function LoudnessChart({
   manualYRange,
   onManualYRangeChange,
   onHoverTime,
-  isArmed,
+  playbackBuffer,
 }: LoudnessChartProps) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const plotBoxRef = useRef<HTMLDivElement>(null);
@@ -194,6 +199,216 @@ export function LoudnessChart({
   const xAxisPixels = compact ? 34 : X_AXIS_HEIGHT;
   const yAxisW = compact ? 34 : Y_AXIS_WIDTH;
   const tickFs = compact ? 12 : 11;
+
+  type TimePair = { t0: number; t1: number };
+
+  const [draftSel, setDraftSel] = useState<TimePair | null>(null);
+  const [committedSel, setCommittedSel] = useState<TimePair | null>(null);
+  const [exitSel, setExitSel] = useState<TimePair | null>(null);
+  const [heavyUi, setHeavyUi] = useState<HeavyUiState>(null);
+  const [popPos, setPopPos] = useState<{ left: number; top: number } | null>(null);
+
+  const regionGestureRef = useRef<{
+    phase: "maybe" | "drag";
+    anchorT: number;
+    anchorX: number;
+    pointerId: number;
+  } | null>(null);
+  const draftRafRef = useRef(0);
+  const pendingDraftRef = useRef<TimePair | null>(null);
+  const lastDraftRef = useRef<TimePair | null>(null);
+  const heavyGenRef = useRef(0);
+  const heavyTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const heavyTargetRef = useRef<TimePair | null>(null);
+  const playbackBufferRef = useRef(playbackBuffer);
+  const compactRef = useRef(compact);
+  const committedSelRef = useRef(committedSel);
+  const hasRegionRef = useRef(false);
+  const timeRangeZoomRef = useRef(timeRange);
+  const selectionOverlayRef = useRef<HTMLDivElement>(null);
+
+  const invalidateHeavy = useCallback(() => {
+    heavyGenRef.current += 1;
+    if (heavyTimerRef.current) clearTimeout(heavyTimerRef.current);
+    setHeavyUi(null);
+    heavyTargetRef.current = null;
+  }, []);
+
+  const runHeavy = useCallback(async (id: number) => {
+    if (id !== heavyGenRef.current) return;
+    const buf = playbackBufferRef.current;
+    const tgt = heavyTargetRef.current;
+    if (!buf || !tgt || compactRef.current) return;
+    const t0 = Math.min(tgt.t0, tgt.t1);
+    const t1 = Math.max(tgt.t0, tgt.t1);
+    if (t1 - t0 < MIN_REGION_SEC) return;
+    if (id !== heavyGenRef.current) return;
+    setHeavyUi({ kind: "busy" });
+    try {
+      const d = await analyzeRegionHeavy(buf, t0, t1);
+      if (id !== heavyGenRef.current) return;
+      if (!d) setHeavyUi({ kind: "err", message: "Selection too short to analyze." });
+      else setHeavyUi({ kind: "ok", data: d });
+    } catch (e) {
+      if (id !== heavyGenRef.current) return;
+      setHeavyUi({ kind: "err", message: e instanceof Error ? e.message : "Analysis failed" });
+    }
+  }, []);
+
+  const scheduleHeavyDebounced = useCallback(() => {
+    if (heavyTimerRef.current) clearTimeout(heavyTimerRef.current);
+    heavyGenRef.current += 1;
+    setHeavyUi(null);
+    const id = heavyGenRef.current;
+    heavyTimerRef.current = setTimeout(() => void runHeavy(id), HEAVY_DEBOUNCE_MS);
+  }, [runHeavy]);
+
+  const flushHeavyImmediate = useCallback(() => {
+    if (heavyTimerRef.current) clearTimeout(heavyTimerRef.current);
+    heavyGenRef.current += 1;
+    const id = heavyGenRef.current;
+    void runHeavy(id);
+  }, [runHeavy]);
+
+  const scheduleHeavyDebouncedRef = useRef(scheduleHeavyDebounced);
+
+  const flushDraftSelection = useCallback(() => {
+    draftRafRef.current = 0;
+    const p = pendingDraftRef.current;
+    if (p) {
+      lastDraftRef.current = p;
+      setDraftSel(p);
+      heavyTargetRef.current = p;
+      scheduleHeavyDebouncedRef.current();
+    }
+  }, []);
+
+  const flushDraftSelectionRef = useRef(flushDraftSelection);
+
+  const queueDraftSelection = useCallback((t0: number, t1: number) => {
+    pendingDraftRef.current = { t0, t1 };
+    if (!draftRafRef.current) {
+      draftRafRef.current = requestAnimationFrame(() => flushDraftSelectionRef.current());
+    }
+  }, []);
+
+  const wipeInProgressGesture = useCallback(() => {
+    regionGestureRef.current = null;
+    pendingDraftRef.current = null;
+    if (draftRafRef.current) {
+      cancelAnimationFrame(draftRafRef.current);
+      draftRafRef.current = 0;
+    }
+    setDraftSel(null);
+    lastDraftRef.current = null;
+  }, []);
+
+  const pinchCancelDraft = useCallback(() => {
+    wipeInProgressGesture();
+  }, [wipeInProgressGesture]);
+
+  const clearCommittedForNewDrag = useCallback(() => {
+    setExitSel(null);
+    setCommittedSel(null);
+    invalidateHeavy();
+  }, [invalidateHeavy]);
+
+  const fadeCommittedIfAny = useCallback(() => {
+    const c = committedSelRef.current;
+    if (c) {
+      setExitSel(c);
+      setCommittedSel(null);
+      invalidateHeavy();
+    }
+  }, [invalidateHeavy]);
+
+  const requestInstantClearAllSelection = useCallback(() => {
+    wipeInProgressGesture();
+    regionGestureRef.current = null;
+    setCommittedSel(null);
+    setExitSel(null);
+    invalidateHeavy();
+  }, [invalidateHeavy, wipeInProgressGesture]);
+
+  const requestFadeClearAllSelection = useCallback(() => {
+    wipeInProgressGesture();
+    regionGestureRef.current = null;
+    const c = committedSelRef.current;
+    setCommittedSel(null);
+    if (c) setExitSel(c);
+    else setExitSel(null);
+    invalidateHeavy();
+  }, [invalidateHeavy, wipeInProgressGesture]);
+
+  const commitDraftSelection = useCallback(
+    (t0: number, t1: number) => {
+      const a = Math.min(t0, t1);
+      const b = Math.max(t0, t1);
+      if (b - a < MIN_REGION_SEC) return;
+      setExitSel(null);
+      wipeInProgressGesture();
+      lastDraftRef.current = { t0: a, t1: b };
+      setCommittedSel({ t0: a, t1: b });
+      heavyTargetRef.current = { t0: a, t1: b };
+      flushHeavyImmediate();
+    },
+    [flushHeavyImmediate, wipeInProgressGesture],
+  );
+
+  const plotLeaveCancelDraft = useCallback(() => {
+    const g = regionGestureRef.current;
+    if (g?.phase === "drag" || g?.phase === "maybe") {
+      wipeInProgressGesture();
+    }
+    regionGestureRef.current = null;
+  }, [wipeInProgressGesture]);
+
+  useEffect(() => {
+    return () => {
+      if (draftRafRef.current) cancelAnimationFrame(draftRafRef.current);
+      if (heavyTimerRef.current) clearTimeout(heavyTimerRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (compact) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- clear region UI when crossing mobile breakpoint
+      requestInstantClearAllSelection();
+    }
+  }, [compact, requestInstantClearAllSelection]);
+
+  useEffect(() => {
+    if (compact) {
+      timeRangeZoomRef.current = timeRange;
+      return;
+    }
+    const prev = timeRangeZoomRef.current;
+    timeRangeZoomRef.current = timeRange;
+    if (prev.start === timeRange.start && prev.end === timeRange.end) return;
+    if (!hasRegionRef.current) return;
+    requestFadeClearAllSelection();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only react to visible window span, not timeRange object identity
+  }, [compact, timeRange.start, timeRange.end, requestFadeClearAllSelection]);
+
+  useEffect(() => {
+    if (compact) return;
+    const onDoc = (e: MouseEvent) => {
+      const t = e.target;
+      if (!(t instanceof Element)) return;
+      if (t.closest(".region-selection-popover")) return;
+      if (t.closest(".chart-plot")) return;
+      if (!hasRegionRef.current) return;
+      requestFadeClearAllSelection();
+    };
+    document.addEventListener("mousedown", onDoc, true);
+    return () => document.removeEventListener("mousedown", onDoc, true);
+  }, [compact, requestFadeClearAllSelection]);
+
+  const overlayPair = draftSel ?? committedSel ?? exitSel;
+  const quickStats = useMemo(() => {
+    if (!overlayPair || compact) return null;
+    return computeQuickRegionStats(data, overlayPair.t0, overlayPair.t1);
+  }, [overlayPair, data, compact]);
 
   // Measure the inner plot container so we can map clientX <-> seconds.
   useLayoutEffect(() => {
@@ -255,6 +470,39 @@ export function LoudnessChart({
     [plotLeftPx, plotWidthPx, tSpan, timeRange.start],
   );
 
+  useLayoutEffect(() => {
+    if (compact || !overlayPair) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- sync popover to overlay visibility
+      setPopPos(null);
+      return;
+    }
+    const el = selectionOverlayRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const cardW = 288;
+    const cardH = 260;
+    const pad = 10;
+    let left = r.right - cardW - pad;
+    let top = r.top - cardH - pad;
+    if (left < pad) left = pad;
+    if (left + cardW > window.innerWidth - pad) left = Math.max(pad, window.innerWidth - cardW - pad);
+    if (top < pad) top = Math.min(r.bottom + pad, window.innerHeight - cardH - pad);
+    if (top + cardH > window.innerHeight - pad) top = Math.max(pad, window.innerHeight - cardH - pad);
+    setPopPos({ left, top });
+  }, [
+    overlayPair,
+    compact,
+    plotBox,
+    timeRange,
+    plotLeftPx,
+    plotWidthPx,
+    plotTopPx,
+    plotInnerHeightPx,
+    draftSel,
+    committedSel,
+    exitSel,
+  ]);
+
   // ---- Hover handling on a transparent layer over the plot ----
   // We throttle hover state to rAF so a 120Hz pointermove burst becomes 1
   // update per frame (Recharts is memoed so it won't re-render, but the
@@ -285,6 +533,82 @@ export function LoudnessChart({
       if (hoverRafRef.current) cancelAnimationFrame(hoverRafRef.current);
     };
   }, []);
+
+  const flushDraftForPointerUp = useCallback(() => {
+    if (draftRafRef.current) {
+      cancelAnimationFrame(draftRafRef.current);
+      draftRafRef.current = 0;
+    }
+    flushDraftSelectionRef.current();
+  }, []);
+
+  type PointerRegionCtx = {
+    compact: boolean;
+    plotLeftPx: number;
+    plotRightPx: number;
+    xToTime: (x: number) => number;
+    pinchCancelDraft: () => void;
+    clearCommittedForNewDrag: () => void;
+    fadeCommittedIfAny: () => void;
+    plotLeaveCancelDraft: () => void;
+    commitDraftSelection: (t0: number, t1: number) => void;
+    flushDraftForPointerUp: () => void;
+    queueDraftSelection: (t0: number, t1: number) => void;
+  };
+
+  const pointerRegionRef = useRef<PointerRegionCtx>({
+    compact: true,
+    plotLeftPx: 0,
+    plotRightPx: 0,
+    xToTime: () => 0,
+    pinchCancelDraft: () => {},
+    clearCommittedForNewDrag: () => {},
+    fadeCommittedIfAny: () => {},
+    plotLeaveCancelDraft: () => {},
+    commitDraftSelection: () => {},
+    flushDraftForPointerUp: () => {},
+    queueDraftSelection: () => {},
+  });
+
+  useLayoutEffect(() => {
+    playbackBufferRef.current = playbackBuffer;
+    compactRef.current = compact;
+    committedSelRef.current = committedSel;
+    hasRegionRef.current = !!(draftSel ?? committedSel ?? exitSel);
+    scheduleHeavyDebouncedRef.current = scheduleHeavyDebounced;
+    flushDraftSelectionRef.current = flushDraftSelection;
+    pointerRegionRef.current = {
+      compact,
+      plotLeftPx,
+      plotRightPx,
+      xToTime,
+      pinchCancelDraft,
+      clearCommittedForNewDrag,
+      fadeCommittedIfAny,
+      plotLeaveCancelDraft,
+      commitDraftSelection,
+      flushDraftForPointerUp,
+      queueDraftSelection,
+    };
+  }, [
+    playbackBuffer,
+    compact,
+    committedSel,
+    draftSel,
+    exitSel,
+    scheduleHeavyDebounced,
+    flushDraftSelection,
+    plotLeftPx,
+    plotRightPx,
+    xToTime,
+    pinchCancelDraft,
+    clearCommittedForNewDrag,
+    fadeCommittedIfAny,
+    plotLeaveCancelDraft,
+    commitDraftSelection,
+    flushDraftForPointerUp,
+    queueDraftSelection,
+  ]);
 
   // ---- Wheel: zoom + pan, rAF-coalesced ----
   // Refs hold the "live" target ranges so multiple wheel events in the same
@@ -445,7 +769,27 @@ export function LoudnessChart({
     const onDown = (e: PointerEvent) => {
       if (e.pointerType === "mouse" && e.button !== 0) return;
       pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-      if (pointers.size === 2) syncPinchBase();
+      const pr = pointerRegionRef.current;
+      if (pointers.size === 2) {
+        pr.pinchCancelDraft();
+        regionGestureRef.current = null;
+        syncPinchBase();
+        return;
+      }
+      if (!pr.compact && e.pointerType === "mouse" && e.button === 0 && pointers.size === 1) {
+        const r = el.getBoundingClientRect();
+        const x = e.clientX - r.left;
+        if (x >= pr.plotLeftPx && x <= pr.plotRightPx) {
+          regionGestureRef.current = {
+            phase: "maybe",
+            anchorT: pr.xToTime(x),
+            anchorX: x,
+            pointerId: e.pointerId,
+          };
+        } else {
+          regionGestureRef.current = null;
+        }
+      }
     };
 
     const onMove = (e: PointerEvent) => {
@@ -466,6 +810,8 @@ export function LoudnessChart({
       pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
 
       if (pointers.size === 2) {
+        pointerRegionRef.current.pinchCancelDraft();
+        regionGestureRef.current = null;
         if (!pinch.current) syncPinchBase();
         if (pinch.current) {
           e.preventDefault();
@@ -478,6 +824,36 @@ export function LoudnessChart({
       }
 
       if (pointers.size === 1) {
+        const pr = pointerRegionRef.current;
+        const rs = regionGestureRef.current;
+        if (
+          !pr.compact &&
+          rs &&
+          e.pointerId === rs.pointerId &&
+          e.pointerType === "mouse"
+        ) {
+          const leftDown = (e.buttons & 1) !== 0;
+          const r = el.getBoundingClientRect();
+          const x = e.clientX - r.left;
+          if (rs.phase === "maybe" && leftDown) {
+            const dx = Math.abs(x - rs.anchorX);
+            if (dx > MIN_REGION_DRAG_PX && x >= pr.plotLeftPx && x <= pr.plotRightPx) {
+              rs.phase = "drag";
+              pr.clearCommittedForNewDrag();
+              const cx = clamp(x, pr.plotLeftPx, pr.plotRightPx);
+              const t = pr.xToTime(cx);
+              pr.queueDraftSelection(Math.min(rs.anchorT, t), Math.max(rs.anchorT, t));
+              return;
+            }
+          }
+          if (rs.phase === "drag" && leftDown) {
+            const cx = clamp(x, pr.plotLeftPx, pr.plotRightPx);
+            const t = pr.xToTime(cx);
+            pr.queueDraftSelection(Math.min(rs.anchorT, t), Math.max(rs.anchorT, t));
+            return;
+          }
+        }
+
         const r = el.getBoundingClientRect();
         const x = e.clientX - r.left;
         if (x < plotLeftPx || x > plotRightPx) queueHover(null, null);
@@ -486,12 +862,29 @@ export function LoudnessChart({
     };
 
     const clearPointer = (e: PointerEvent) => {
+      const pr = pointerRegionRef.current;
+      const rs = regionGestureRef.current;
+      if (rs && e.pointerId === rs.pointerId) {
+        if (rs.phase === "drag") {
+          pr.flushDraftForPointerUp();
+          const d = lastDraftRef.current;
+          if (d && Math.abs(d.t1 - d.t0) >= MIN_REGION_SEC) {
+            pr.commitDraftSelection(d.t0, d.t1);
+          } else {
+            pr.pinchCancelDraft();
+          }
+        } else if (rs.phase === "maybe") {
+          pr.fadeCommittedIfAny();
+        }
+        regionGestureRef.current = null;
+      }
       pointers.delete(e.pointerId);
       if (pointers.size < 2) pinch.current = null;
       if (pointers.size === 0) queueHover(null, null);
     };
 
     const onLeave = () => {
+      pointerRegionRef.current.plotLeaveCancelDraft();
       pointers.clear();
       pinch.current = null;
       queueHover(null, null);
@@ -647,6 +1040,19 @@ export function LoudnessChart({
   // Target waveform resolution: ~2 lines per CSS pixel of plot width.
   const waveformMaxBuckets = Math.max(64, Math.round(plotWidthPx * 2));
 
+  const regionBounds = useMemo(() => {
+    if (!overlayPair || compact) return null;
+    const t0 = Math.min(overlayPair.t0, overlayPair.t1);
+    const t1 = Math.max(overlayPair.t0, overlayPair.t1);
+    const x1 = timeToX(t0);
+    const x2 = timeToX(t1);
+    const left = clamp(Math.min(x1, x2), plotLeftPx, plotRightPx);
+    const right = clamp(Math.max(x1, x2), plotLeftPx, plotRightPx);
+    const width = Math.max(2, right - left);
+    const isExiting = exitSel !== null && draftSel === null && committedSel === null;
+    return { left, width, t0, t1, isExiting };
+  }, [overlayPair, compact, timeToX, exitSel, draftSel, committedSel, plotLeftPx, plotRightPx]);
+
   const onTimeBarChange = useCallback(
     (s: number, e: number) => onTimeRangeChange(s, e),
     [onTimeRangeChange],
@@ -662,7 +1068,7 @@ export function LoudnessChart({
   return (
     <div
       ref={wrapRef}
-      className={`loudness-chart-wrap${isArmed ? " armed" : ""}`}
+      className="loudness-chart-wrap"
       style={{ position: "relative" }}
     >
       <div className="chart-controls-row">
@@ -731,6 +1137,44 @@ export function LoudnessChart({
             tickFontSize={tickFs}
             xAxisHeight={xAxisPixels}
           />
+
+          {regionBounds && (
+            <div
+              ref={selectionOverlayRef}
+              className={`region-selection-layer${regionBounds.isExiting ? " region-selection-layer--exiting" : ""}`}
+              style={{
+                position: "absolute",
+                left: regionBounds.left,
+                top: plotTopPx,
+                width: regionBounds.width,
+                height: plotInnerHeightPx,
+                zIndex: 2,
+                pointerEvents: "none",
+              }}
+              onTransitionEnd={(e) => {
+                if (e.propertyName === "opacity" && regionBounds.isExiting) {
+                  setExitSel(null);
+                }
+              }}
+            >
+              <svg
+                className="region-selection-svg"
+                width="100%"
+                height="100%"
+                viewBox={`0 0 ${regionBounds.width} ${plotInnerHeightPx}`}
+                preserveAspectRatio="none"
+              >
+                <rect
+                  x={1}
+                  y={1}
+                  width={Math.max(0, regionBounds.width - 2)}
+                  height={Math.max(0, plotInnerHeightPx - 2)}
+                  rx={6}
+                  className="region-selection-rect"
+                />
+              </svg>
+            </div>
+          )}
 
           {/* Hover line */}
           {hoverX != null && (
@@ -815,6 +1259,16 @@ export function LoudnessChart({
           />
         </div>
       </div>
+
+      {regionBounds && popPos && !compact && (
+        <RegionSelectionReadout
+          t0={regionBounds.t0}
+          t1={regionBounds.t1}
+          quick={quickStats}
+          heavy={heavyUi}
+          style={{ left: popPos.left, top: popPos.top }}
+        />
+      )}
 
       {/* Full-width LUFS window — narrow viewports (chart uses full width above) */}
       <div className="chart-lufs-below">
