@@ -63,15 +63,15 @@ Production deploys run when you push a **semver tag** on `main` (see [Release](#
 ## Contributing
 
 - Open PRs against `main`; use [conventional PR titles](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `chore:`, …).
-- CI (lint + build) and semantic PR title checks must pass.
-- `main` accepts **squash merges** only.
+- Required PR checks: **Lint**, **Build**, and semantic PR title. CI runs on pull requests only.
+- `main` accepts **squash merges** only; direct pushes are blocked.
 
 ## Release
 
 1. Add changes under `## Upcoming` in `CHANGELOG.md`.
 2. `./tool/prepare_release.sh X.Y.Z` — opens a release PR with version bump and changelog rewrite.
 3. Squash-merge the PR to `main`.
-4. Tag and push (publishes to GitHub Pages and creates a GitHub release):
+4. Tag and push (publishes to GitHub Pages, builds macOS/Windows desktop installers, and creates a GitHub release with assets):
 
 ```bash
 git checkout main && git pull

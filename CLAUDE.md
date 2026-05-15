@@ -60,7 +60,7 @@ bun run tauri:build   # → bun tool/build-tauri.ts (installers under src-tauri/
 
 ## Workflow Rules
 
-- **`main` is protected:** changes land via PR only; merge with **squash**. Required checks: **CI**, **Validate PR Title**.
+- **`main` is protected:** no direct pushes (including admins); changes land via **squash-merge PR** only. Required PR checks: **Lint**, **Build**, **Validate PR Title**. CI runs on pull requests only, not on pushes to `main`.
 - Run `bun run lint` and `bun run build` before pushing.
 - After non-trivial UI changes, smoke-test in the browser (drag a real file in, pan/zoom, hit Space).
 - Production behaviour can differ noticeably from dev for chart performance — prefer `bun run preview` over `bun run dev` when investigating lag.
@@ -77,7 +77,7 @@ bun run tauri:build   # → bun tool/build-tauri.ts (installers under src-tauri/
 1. Add bullets under `## Upcoming` in `CHANGELOG.md` (newest at top).
 2. Run `./tool/prepare_release.sh X.Y.Z` → release PR (`chore/release-X.Y.Z`).
 3. Merge the PR to `main` (squash) after CI passes.
-4. Tag on `main` and push the tag (triggers `.github/workflows/publish.yml` → GitHub Pages + GitHub release):
+4. Tag on `main` and push the tag (triggers `.github/workflows/publish.yml` → GitHub Pages, GitHub release with macOS/Windows desktop installers):
 
    ```bash
    git checkout main && git pull
