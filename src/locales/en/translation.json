@@ -1,0 +1,92 @@
+{
+  "app": {
+    "name": "Loudline",
+    "tagline": "Offline LUFS metering for your masters"
+  },
+  "drop": {
+    "title": "Drop your audio",
+    "hintWeb": "or click to browse.",
+    "hintDesktop": "or click to browse."
+  },
+  "footer": {
+    "version": "Loudline v{{version}}",
+    "privacyWeb": "All processing stays in your browser. Nothing is uploaded.",
+    "privacyApp": "All processing stays on this device. Nothing is uploaded."
+  },
+  "progress": {
+    "decoding": "Decoding audio…",
+    "analyzing": "Measuring loudness…"
+  },
+  "error": {
+    "title": "Could not analyze this file",
+    "retry": "Choose another file",
+    "unknown": "Something went wrong"
+  },
+  "fileStrip": {
+    "waveformNote": "{{size}} · waveform shows peak level across channels",
+    "removeFile": "Remove file"
+  },
+  "meter": {
+    "program": "PROGRAM",
+    "atPlayhead": "AT PLAYHEAD",
+    "integrated": "INTEGRATED",
+    "lra": "LRA",
+    "truePeak": "TRUE PEAK",
+    "momentary": "MOMENTARY",
+    "shortTerm": "SHORT-TERM",
+    "timecode": "TIMECODE",
+    "hoverChart": "Hover the chart to see values at the playhead",
+    "channelMono": "Mono",
+    "channelStereo": "Stereo",
+    "channelMulti": "{{count}} channels",
+    "unitLufs": "LUFS",
+    "unitLu": "LU",
+    "unitDbtp": "dBTP"
+  },
+  "transport": {
+    "hoverChartOrFile": "Hover the chart or file strip",
+    "selectRegion": "Drag on the chart to select a time range",
+    "spacePlayStop": "play or pause",
+    "openShortcut": "open a file",
+    "mobileScrub": "Touch the chart to scrub. Use the bar below to play or pause.",
+    "playing": "Playing",
+    "paused": "Paused",
+    "play": "Play",
+    "pause": "Pause",
+    "largeFilesNote": "Long files are decoded fully in memory. Very long masters may be slow on devices with little RAM.",
+    "toolbarLabel": "Playback"
+  },
+  "chart": {
+    "fullScaleY": "Full LUFS scale (-70 to 0)",
+    "resetY": "Reset Y",
+    "resetYTitle": "Reset the LUFS axis to auto-fit",
+    "lufs": "LUFS",
+    "lufsWindow": "LUFS window",
+    "time": "Time",
+    "seriesMomentary": "Momentary",
+    "seriesShortTerm": "Short-term",
+    "seriesIntegrated": "Integrated",
+    "tooltipMomentary": "Momentary: {{value}}",
+    "tooltipShortTerm": "Short-term: {{value}}"
+  },
+  "selection": {
+    "title": "SELECTION",
+    "curveInWindow": "CURVE IN RANGE",
+    "momentaryMinMax": "Momentary min / max",
+    "shortTermMinMax": "Short-term min / max",
+    "momentaryMedianP95": "Momentary median, p95",
+    "shortTermMedianP95": "Short-term median, p95",
+    "pointsInWindow": "Samples in range",
+    "meteredOnSlice": "LOUDNESS IN RANGE (BS.1770)",
+    "heavyPending": "Integrated loudness, LRA, and true peak for this range are measured after you release the mouse, so the UI stays responsive.",
+    "measuring": "Measuring selection…",
+    "tooShort": "This selection is too short to analyze.",
+    "analyzeFailed": "Could not analyze selection",
+    "integrated": "Integrated",
+    "lra": "LRA",
+    "truePeakMax": "True peak (max)"
+  },
+  "dialog": {
+    "audioFilter": "Audio files"
+  }
+}

@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import { useTranslation } from "react-i18next";
 import { formatDbtp, formatLufs, formatTime } from "../lib/format";
 import type { HeavyRegionStats, QuickRegionStats } from "../lib/regionLoudnessStats";
 
@@ -32,6 +33,7 @@ const valStyle: CSSProperties = {
 };
 
 export function RegionSelectionReadout({ t0, t1, quick, heavy, style }: RegionSelectionReadoutProps) {
+  const { t } = useTranslation();
   const a = Math.min(t0, t1);
   const b = Math.max(t0, t1);
 
@@ -63,7 +65,7 @@ export function RegionSelectionReadout({ t0, t1, quick, heavy, style }: RegionSe
           marginBottom: 6,
         }}
       >
-        SELECTION
+        {t("selection.title")}
       </div>
       <div style={{ fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums", fontWeight: 600 }}>
         {formatTime(a)} → {formatTime(b)}
@@ -71,9 +73,9 @@ export function RegionSelectionReadout({ t0, t1, quick, heavy, style }: RegionSe
 
       {quick && (
         <>
-          <div style={{ ...rowStyle, marginTop: 10, fontSize: 10, letterSpacing: "0.06em" }}>CURVE (IN WINDOW)</div>
+          <div style={{ ...rowStyle, marginTop: 10, fontSize: 10, letterSpacing: "0.06em" }}>{t("selection.curveInWindow")}</div>
           <div style={rowStyle}>
-            <span>Momentary min / max</span>
+            <span>{t("selection.momentaryMinMax")}</span>
             <span style={valStyle}>
               {formatLufs(quick.momentary.min)} / {formatLufs(quick.momentary.max)}
             </span>
@@ -130,17 +132,17 @@ export function RegionSelectionReadout({ t0, t1, quick, heavy, style }: RegionSe
       {heavy?.kind === "ok" && (
         <div style={{ marginTop: 8 }}>
           <div style={rowStyle}>
-            <span>Integrated</span>
-            <span style={valStyle}>{formatLufs(heavy.data.integrated)} LUFS</span>
+            <span>{t("selection.integrated")}</span>
+            <span style={valStyle}>{formatLufs(heavy.data.integrated)} {t("meter.unitLufs")}</span>
           </div>
           <div style={rowStyle}>
-            <span>LRA</span>
-            <span style={valStyle}>{heavy.data.lra.toFixed(1)} LU</span>
+            <span>{t("selection.lra")}</span>
+            <span style={valStyle}>{heavy.data.lra.toFixed(1)} {t("meter.unitLu")}</span>
           </div>
           <div style={rowStyle}>
-            <span>True peak (max)</span>
+            <span>{t("selection.truePeakMax")}</span>
             <span style={{ ...valStyle, color: heavy.data.truePeakMax > -1 ? "var(--destructive)" : undefined }}>
-              {formatDbtp(heavy.data.truePeakMax)} dBTP
+              {formatDbtp(heavy.data.truePeakMax)} {t("meter.unitDbtp")}
             </span>
           </div>
         </div>

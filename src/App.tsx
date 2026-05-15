@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { DropZone } from "./components/DropZone";
 import { FileStrip } from "./components/FileStrip";
 import { LoudnessChart } from "./components/LoudnessChart";
@@ -10,11 +11,15 @@ import { usePreviewPlayback } from "./hooks/usePreviewPlayback";
 import { decodeFileToBuffer } from "./lib/decodeAudio";
 import { analyzeFilePipeline } from "./lib/analyzeOffline";
 import { interpolateLoudnessAtTime } from "./lib/loudnessMath";
+import { platformKey } from "./lib/platformCopy";
+import { isTauriDesktop, openAudioFileViaDialog } from "./lib/tauriEnv";
+import { APP_VERSION } from "./lib/version";
 import type { AnalysisProgress, AnalysisResult } from "./types";
 
 type AppState = "idle" | "processing" | "done" | "error";
 
 export default function App() {
+  const { t } = useTranslation();
   const [state, setState] = useState<AppState>("idle");
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -34,9 +39,9 @@ export default function App() {
 
   const { isPlaying, toggle, stop } = usePreviewPlayback({
     buffer: result?.playbackBuffer ?? null,
-    onTimeUpdate: (t) => {
-      setPlaybackTime(t);
-      setStickyCursor(t);
+    onTimeUpdate: (time) => {
+      setPlaybackTime(time);
+      setStickyCursor(time);
     },
   });
 
@@ -65,8 +70,6 @@ export default function App() {
       }
       if (isChartHovered || isFileHovered) {
         e.preventDefault();
-        // From file strip: always start at t=0.
-        // From chart: start at the hovered time (or last sticky cursor as a fallback).
         let start = 0;
         if (isChartHovered) {
           start = hoverTime ?? stickyCursor ?? 0;
@@ -78,26 +81,43 @@ export default function App() {
     return () => window.removeEventListener("keydown", onKey);
   }, [state, result, isPlaying, isChartHovered, isFileHovered, hoverTime, stickyCursor, toggle, stop]);
 
-  const handleFile = useCallback(async (f: File) => {
-    setFile(f);
-    setState("processing");
-    setError(null);
-    setResult(null);
-    stop();
-    setProgress({ stage: "decoding", progress: 0 });
-    try {
-      const raw = await decodeFileToBuffer(f);
-      const res = await analyzeFilePipeline(raw, setProgress);
-      setResult(res);
-      setTimeRange({ start: 0, end: res.duration });
-      setStickyCursor(0);
-      setManualYRange(null);
-      setState("done");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error");
-      setState("error");
-    }
-  }, [stop]);
+  const handleFile = useCallback(
+    async (f: File) => {
+      setFile(f);
+      setState("processing");
+      setError(null);
+      setResult(null);
+      stop();
+      setProgress({ stage: "decoding", progress: 0 });
+      try {
+        const raw = await decodeFileToBuffer(f);
+        const res = await analyzeFilePipeline(raw, setProgress);
+        setResult(res);
+        setTimeRange({ start: 0, end: res.duration });
+        setStickyCursor(0);
+        setManualYRange(null);
+        setState("done");
+      } catch (err) {
+        setError(err instanceof Error ? err.message : t("error.unknown"));
+        setState("error");
+      }
+    },
+    [stop, t],
+  );
+
+  useEffect(() => {
+    if (!isTauriDesktop()) return;
+    const onKey = (e: KeyboardEvent) => {
+      const mod = e.metaKey || e.ctrlKey;
+      if (!mod || e.key.toLowerCase() !== "o") return;
+      e.preventDefault();
+      void openAudioFileViaDialog().then((f) => {
+        if (f) void handleFile(f);
+      });
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [handleFile]);
 
   const reset = useCallback(() => {
     stop();
@@ -108,9 +128,9 @@ export default function App() {
     setHoverTime(null);
   }, [stop]);
 
-  const onChartHover = useCallback((t: number | null) => {
-    setHoverTime(t);
-    if (t != null) setStickyCursor(t);
+  const onChartHover = useCallback((time: number | null) => {
+    setHoverTime(time);
+    if (time != null) setStickyCursor(time);
   }, []);
 
   const handleMobileTransportToggle = useCallback(() => {
@@ -123,10 +143,10 @@ export default function App() {
       <header style={{ marginBottom: 24 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <div style={{ width: 3, height: 22, borderRadius: 2, background: "var(--primary)" }} />
-          <h1 style={{ margin: 0, fontSize: 26, letterSpacing: "-0.02em" }}>Loudline</h1>
+          <h1 style={{ margin: 0, fontSize: 26, letterSpacing: "-0.02em" }}>{t("app.name")}</h1>
         </div>
         <p style={{ margin: "6px 0 0", color: "var(--muted-foreground)", fontSize: 14 }}>
-          Offline loudness analysis for your masters
+          {t("app.tagline")}
         </p>
       </header>
 
@@ -200,29 +220,38 @@ export default function App() {
               }}
             >
               <span className="hint-desktop">
-                <span>Hover chart or file</span>
+                <span>{t("transport.hoverChartOrFile")}</span>
                 <span> · </span>
-                <span>Drag on chart to select a time range</span>
+                <span>{t("transport.selectRegion")}</span>
                 <span> · </span>
                 <span>
-                  <kbd className="kbd">Space</kbd> play / stop
+                  <kbd className="kbd">Space</kbd> {t("transport.spacePlayStop")}
                 </span>
+                {isTauriDesktop() && (
+                  <>
+                    <span> · </span>
+                    <span>
+                      <kbd className="kbd">⌘</kbd>/<kbd className="kbd">Ctrl</kbd>+<kbd className="kbd">O</kbd>{" "}
+                      {t("transport.openShortcut")}
+                    </span>
+                  </>
+                )}
                 <span> · </span>
               </span>
-              <span className="hint-mobile">Touch chart to scrub · Use bar below for play/pause · </span>
+              <span className="hint-mobile">{t("transport.mobileScrub")}</span>
               <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 {isPlaying ? (
                   <>
                     <span className="transport-dot" />
-                    <strong style={{ color: "var(--primary)" }}>Playing</strong>
+                    <strong style={{ color: "var(--primary)" }}>{t("transport.playing")}</strong>
                   </>
                 ) : (
-                  <span>Paused</span>
+                  <span>{t("transport.paused")}</span>
                 )}
               </span>
             </div>
             <p style={{ margin: 0, fontSize: 12, color: "var(--muted-foreground)" }}>
-              Large files are fully decoded in memory; very long masters may stress low-RAM devices.
+              {t("transport.largeFilesNote")}
             </p>
             <MobileTransportDock
               isPlaying={isPlaying}
@@ -233,8 +262,22 @@ export default function App() {
         )}
       </main>
 
-      <footer style={{ marginTop: 48, paddingTop: 20, borderTop: "1px solid var(--border)", fontSize: 12, color: "var(--muted-foreground)", textAlign: "center" }}>
-        All processing happens locally in your browser. No upload.
+      <footer
+        style={{
+          marginTop: 48,
+          paddingTop: 20,
+          borderTop: "1px solid var(--border)",
+          fontSize: 12,
+          color: "var(--muted-foreground)",
+          textAlign: "center",
+          fontFamily: "var(--font-mono)",
+          fontVariantNumeric: "tabular-nums",
+        }}
+      >
+        <div>{t("footer.version", { version: APP_VERSION })}</div>
+        <div style={{ marginTop: 6, fontFamily: "inherit", fontVariantNumeric: "normal" }}>
+          {t(platformKey("footer.privacyWeb", "footer.privacyApp"))}
+        </div>
       </footer>
     </div>
   );

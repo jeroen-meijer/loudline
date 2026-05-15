@@ -1,5 +1,18 @@
 ## Upcoming
 
+## 0.5.0
+
+- chore: single source of truth for app version (`package.json` + `tool/sync-version.ts`); version shown in footer
+- feat(i18n): `react-i18next` with bundled English (`src/locales/en/`); desktop vs web copy via `platformKey()` (footer privacy, drop hint)
+- fix(desktop): dark window background on fast resize (`index.html`, `tauri.conf.json` `backgroundColor`, app root min-height)
+- fix(desktop): single drop/browse control in `DropZone` (native dialog on Tauri, hidden file input on web)
+- chore: `tool/build-tauri.ts` sync version, lint, and production desktop bundle
+
+## 0.4.0
+
+- feat(desktop): Tauri 2 app for Windows, macOS, and Linux — same UI as the web build, smaller binary than Electron
+- feat(desktop): native **Open file…** dialog, **⌘/Ctrl+O**, and window drag-and-drop
+
 ## 0.3.0
 
 - fix(chart): restore desktop hover scrub (playhead follows mouse without holding a button) after native pointer refactor

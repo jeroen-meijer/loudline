@@ -1,3 +1,5 @@
+import { useTranslation } from "react-i18next";
+
 interface FileStripProps {
   name: string;
   sizeBytes: number;
@@ -17,6 +19,8 @@ export function FileStrip({
   onHoverEnter,
   onHoverLeave,
 }: FileStripProps) {
+  const { t } = useTranslation();
+
   return (
     <div
       className="card file-strip"
@@ -35,10 +39,10 @@ export function FileStrip({
           {name}
         </div>
         <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 4 }}>
-          {fmtMb(sizeBytes)} · waveform uses max(|sample|) across channels
+          {t("fileStrip.waveformNote", { size: fmtMb(sizeBytes) })}
         </div>
       </div>
-      <button type="button" className="btn ghost" onClick={onReplace} title="Remove file">
+      <button type="button" className="btn ghost" onClick={onReplace} title={t("fileStrip.removeFile")}>
         ✕
       </button>
     </div>

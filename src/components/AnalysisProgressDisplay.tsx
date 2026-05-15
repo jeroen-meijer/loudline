@@ -1,7 +1,9 @@
+import { useTranslation } from "react-i18next";
 import type { AnalysisProgress } from "../types";
 
 export function AnalysisProgressDisplay({ progress }: { progress: AnalysisProgress }) {
-  const label = progress.stage === "decoding" ? "Decoding audio…" : "Measuring loudness…";
+  const { t } = useTranslation();
+  const label = progress.stage === "decoding" ? t("progress.decoding") : t("progress.analyzing");
   const pct = Math.round(progress.progress * 100);
   return (
     <div className="card" style={{ padding: 24 }}>

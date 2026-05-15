@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { formatDbtp, formatLufs, formatTime } from "../lib/format";
 
 interface MeterDisplayProps {
@@ -53,20 +54,30 @@ export function MeterDisplay({
   momentary,
   shortTerm,
 }: MeterDisplayProps) {
+  const { t } = useTranslation();
   const ch =
-    channels === 1 ? "Mono" : channels === 2 ? "Stereo" : `${channels} ch (metered as presented to worklet)`;
+    channels === 1
+      ? t("meter.channelMono")
+      : channels === 2
+        ? t("meter.channelStereo")
+        : t("meter.channelMulti", { count: channels });
   const rate = `${(sampleRate / 1000).toFixed(1)} kHz`;
 
   return (
     <div className="meter-grid">
       <div className="card" style={{ padding: 16 }}>
         <div style={{ fontSize: 11, letterSpacing: "0.08em", color: "var(--muted-foreground)", marginBottom: 12 }}>
-          PROGRAM
+          {t("meter.program")}
         </div>
         <div className="meter-card-inner">
-          <Cell label="INTEGRATED" value={formatLufs(integrated)} unit="LUFS" large />
-          <Cell label="LRA" value={lra.toFixed(1)} unit="LU" />
-          <Cell label="TRUE PEAK" value={formatDbtp(truePeakMax)} unit="dBTP" warn={truePeakMax > -1} />
+          <Cell label={t("meter.integrated")} value={formatLufs(integrated)} unit={t("meter.unitLufs")} large />
+          <Cell label={t("meter.lra")} value={lra.toFixed(1)} unit={t("meter.unitLu")} />
+          <Cell
+            label={t("meter.truePeak")}
+            value={formatDbtp(truePeakMax)}
+            unit={t("meter.unitDbtp")}
+            warn={truePeakMax > -1}
+          />
         </div>
         <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--border)", fontSize: 12, color: "var(--muted-foreground)" }}>
           {formatTime(duration)} · {rate} · {ch}
@@ -74,16 +85,16 @@ export function MeterDisplay({
       </div>
       <div className="card" style={{ padding: 16 }}>
         <div style={{ fontSize: 11, letterSpacing: "0.08em", color: "var(--muted-foreground)", marginBottom: 12 }}>
-          AT PLAYHEAD
+          {t("meter.atPlayhead")}
         </div>
         {momentary != null && shortTerm != null ? (
           <div className="meter-card-inner">
-            <Cell label="MOMENTARY" value={formatLufs(momentary)} unit="LUFS" accent="momentary" />
-            <Cell label="SHORT-TERM" value={formatLufs(shortTerm)} unit="LUFS" large accent="short" />
-            <Cell label="TIMECODE" value={formatTime(cursorTime ?? 0)} />
+            <Cell label={t("meter.momentary")} value={formatLufs(momentary)} unit={t("meter.unitLufs")} accent="momentary" />
+            <Cell label={t("meter.shortTerm")} value={formatLufs(shortTerm)} unit={t("meter.unitLufs")} large accent="short" />
+            <Cell label={t("meter.timecode")} value={formatTime(cursorTime ?? 0)} />
           </div>
         ) : (
-          <div style={{ color: "var(--muted-foreground)", fontSize: 14, padding: "12px 0" }}>Hover chart to see values</div>
+          <div style={{ color: "var(--muted-foreground)", fontSize: 14, padding: "12px 0" }}>{t("meter.hoverChart")}</div>
         )}
       </div>
     </div>

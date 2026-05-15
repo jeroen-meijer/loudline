@@ -33,6 +33,21 @@ bun run build        # tsc -b && vite build
 bun run preview      # http://localhost:4173 (production bundle)
 ```
 
+## Desktop app (Tauri)
+
+Loudline ships as a small native wrapper around the same web UI ([Tauri 2](https://v2.tauri.app/)). Analysis still runs locally in the embedded WebView (same `loudness-worklet` path as the browser build).
+
+**Prerequisites:** [Rust](https://rustup.rs/) (stable), plus platform tooling for [Tauri](https://v2.tauri.app/start/prerequisites/) (Xcode CLT on macOS, etc.).
+
+```bash
+bun run tauri:dev     # Vite + desktop window (hot reload)
+bun run tauri:build   # Release installers in src-tauri/target/release/bundle/
+```
+
+Desktop extras: **Open file…** button, **⌘/Ctrl+O**, and drag-and-drop onto the window. Installers are produced per OS when you run `tauri:build` on that platform.
+
+**Version:** set `package.json` → `version`, then `bun run version:sync` (or rely on `tauri:dev` / `tauri:build`, which sync automatically). Bump with `bun run version:set 0.5.0`.
+
 ## GitHub Pages
 
 CI sets `VITE_BASE_PATH=/<repo-name>/` automatically when building. For a local production build that matches the deployed path:

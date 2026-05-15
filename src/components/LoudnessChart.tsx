@@ -7,6 +7,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { useTranslation } from "react-i18next";
 import {
   memo,
   useCallback,
@@ -88,6 +89,8 @@ interface ChartCoreProps {
   yAxisWidth: number;
   tickFontSize: number;
   xAxisHeight: number;
+  seriesMomentary: string;
+  seriesShortTerm: string;
 }
 
 /**
@@ -103,6 +106,8 @@ const ChartCore = memo(function ChartCore({
   yAxisWidth,
   tickFontSize,
   xAxisHeight,
+  seriesMomentary,
+  seriesShortTerm,
 }: ChartCoreProps) {
   return (
     <ResponsiveContainer width="100%" height="100%">
@@ -141,7 +146,7 @@ const ChartCore = memo(function ChartCore({
         <Area
           type="linear"
           dataKey="momentary"
-          name="Momentary"
+          name={seriesMomentary}
           stroke="var(--chart-momentary)"
           fill="var(--chart-momentary)"
           fillOpacity={0.12}
@@ -153,7 +158,7 @@ const ChartCore = memo(function ChartCore({
         <Line
           type="linear"
           dataKey="shortTerm"
-          name="Short-term"
+          name={seriesShortTerm}
           stroke="var(--chart-short-term)"
           strokeWidth={2}
           dot={false}
@@ -180,6 +185,7 @@ export function LoudnessChart({
   onHoverTime,
   playbackBuffer,
 }: LoudnessChartProps) {
+  const { t } = useTranslation();
   const wrapRef = useRef<HTMLDivElement>(null);
   const plotBoxRef = useRef<HTMLDivElement>(null);
   const [plotBox, setPlotBox] = useState({ width: 0, height: 0 });
@@ -247,13 +253,13 @@ export function LoudnessChart({
     try {
       const d = await analyzeRegionHeavy(buf, t0, t1);
       if (id !== heavyGenRef.current) return;
-      if (!d) setHeavyUi({ kind: "err", message: "Selection too short to analyze." });
+      if (!d) setHeavyUi({ kind: "err", message: t("selection.tooShort") });
       else setHeavyUi({ kind: "ok", data: d });
     } catch (e) {
       if (id !== heavyGenRef.current) return;
-      setHeavyUi({ kind: "err", message: e instanceof Error ? e.message : "Analysis failed" });
+      setHeavyUi({ kind: "err", message: e instanceof Error ? e.message : t("selection.analyzeFailed") });
     }
-  }, []);
+  }, [t]);
 
   const scheduleHeavyDebounced = useCallback(() => {
     if (heavyTimerRef.current) clearTimeout(heavyTimerRef.current);
@@ -1087,7 +1093,7 @@ export function LoudnessChart({
             onClick={() => onManualYRangeChange(null)}
             title="Reset to auto-fit Y range"
           >
-            Reset Y
+            {t("chart.resetY")}
           </button>
         )}
       </div>
@@ -1136,6 +1142,8 @@ export function LoudnessChart({
             yAxisWidth={yAxisW}
             tickFontSize={tickFs}
             xAxisHeight={xAxisPixels}
+            seriesMomentary={t("chart.seriesMomentary")}
+            seriesShortTerm={t("chart.seriesShortTerm")}
           />
 
           {regionBounds && (

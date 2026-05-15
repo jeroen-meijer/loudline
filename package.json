@@ -1,21 +1,29 @@
 {
   "name": "loudline",
   "private": true,
-  "version": "0.3.0",
+  "version": "0.5.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "version:sync": "bun tool/sync-version.ts",
+    "version:set": "bun tool/sync-version.ts",
+    "tauri": "tauri",
+    "tauri:dev": "bun tool/sync-version.ts && tauri dev",
+    "tauri:build": "bun tool/build-tauri.ts"
   },
   "dependencies": {
+    "@tauri-apps/api": "^2.11.0",
+    "@tauri-apps/plugin-dialog": "^2.7.1",
     "loudness-worklet": "^1.6.9",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "recharts": "^3.8.1"
   },
   "devDependencies": {
+    "@tauri-apps/cli": "^2.11.1",
     "@eslint/js": "^10.0.1",
     "@types/node": "^25.7.0",
     "@types/react": "^19.2.14",
