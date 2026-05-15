@@ -1,7 +1,6 @@
 ## Upcoming
 
-## 0.5.1
-
+- ci: cache Bun deps and TypeScript build info; tune rust-cache per OS for faster release builds
 - fix(ci): Windows Tauri release build — use cross-platform `beforeBuildCommand` (rely on `TAURI_ENV_PLATFORM` for Vite base)
 
 ## 0.5.0

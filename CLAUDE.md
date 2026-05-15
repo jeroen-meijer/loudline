@@ -31,8 +31,10 @@ Offline EBU R128 loudness metering web app: drag an audio file, see momentary / 
 - `tool/build-tauri.ts` — version sync + lint + `tauri build`
 - `tool/prepare_release.sh` — open a release PR (changelog + version bump + `gh pr create`)
 - `tool/rewrite_changelog_for_release.sh` — rewrite `CHANGELOG.md` headings for a release
-- `.github/workflows/ci.yml` — lint + build on PRs and `main`
+- `.github/workflows/ci.yml` — lint + build on PRs (cached Bun deps)
 - `.github/workflows/publish.yml` — tagged release → GitHub Pages + GitHub release
+- `.github/actions/setup-bun-deps` — Bun install + `actions/cache` for `node_modules` / Bun store
+- `.github/actions/setup-rust-tauri` — Rust toolchain + `swatinem/rust-cache` per desktop OS
 
 ## Common Commands
 

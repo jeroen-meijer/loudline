@@ -1,0 +1,23 @@
+name: Setup Rust for Tauri
+description: Rust stable toolchain + swatinem/rust-cache tuned for per-OS Tauri desktop builds.
+
+inputs:
+  cache-key:
+    description: Suffix for rust-cache shared-key (e.g. macOS or Windows).
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Rust
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Rust cache
+      uses: swatinem/rust-cache@v2
+      with:
+        workspaces: src-tauri
+        # Separate caches per runner OS/target; avoids cross-platform cache confusion.
+        shared-key: loudline-tauri-${{ inputs.cache-key }}
+        cache-workspace-crates: true
+        cache-on-failure: true
+        # Windows: cache save/upload is slow; still worth it for 10+ minute compiles on cold cache.
