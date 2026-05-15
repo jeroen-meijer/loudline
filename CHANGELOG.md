@@ -2,6 +2,8 @@
 
 ## 0.5.0
 
+## 0.5.0
+
 - chore: single source of truth for app version (`package.json` + `tool/sync-version.ts`); version shown in footer
 - feat(i18n): `react-i18next` with bundled English (`src/locales/en/`); desktop vs web copy via `platformKey()` (footer privacy, drop hint)
 - fix(desktop): dark window background on fast resize (`index.html`, `tauri.conf.json` `backgroundColor`, app root min-height)
