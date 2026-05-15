@@ -63,7 +63,7 @@ Production deploys run when you push a **semver tag** on `main` (see [Release](#
 ## Contributing
 
 - Open PRs against `main`; use [conventional PR titles](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `chore:`, …).
-- Required PR checks: **Lint**, **Build**, and semantic PR title. CI runs on pull requests only.
+- Required PR checks: **Lint**, **Build**, **Changelog updated** (prepend bullets under `## Upcoming`), and semantic PR title. CI runs on pull requests only.
 - `main` accepts **squash merges** only; direct pushes are blocked.
 
 ## Release
