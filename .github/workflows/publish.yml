@@ -7,30 +7,58 @@ on:
       - "v[0-9]+.[0-9]+.[0-9]+"
 
 concurrency:
-  group: github-pages-release
+  group: publish-${{ github.ref }}
   cancel-in-progress: false
 
 permissions:
   contents: write
 
 jobs:
-  publish:
-    name: Publish to GitHub Pages
+  verify-tag:
+    name: Verify tag
     runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.meta.outputs.tag }}
+      version: ${{ steps.meta.outputs.version }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Verify tag is on main branch
+      - name: Resolve tag and version
+        id: meta
         run: |
           TAG_NAME="${GITHUB_REF#refs/tags/}"
+          VERSION="${TAG_NAME#v}"
+          echo "tag=$TAG_NAME" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Verify tag is on main branch
+        run: |
+          TAG_NAME="${{ steps.meta.outputs.tag }}"
           if ! git branch -r --contains "$TAG_NAME" | grep -q "origin/main"; then
             echo "Error: Tag $TAG_NAME is not on the main branch"
             exit 1
           fi
-          echo "Tag $TAG_NAME is on main branch, proceeding with publish"
+          echo "Tag $TAG_NAME is on main branch"
+
+      - name: Verify package.json version matches tag
+        run: |
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          if [ "$PKG_VERSION" != "${{ steps.meta.outputs.version }}" ]; then
+            echo "Error: package.json version ($PKG_VERSION) does not match tag (${{ steps.meta.outputs.version }})"
+            exit 1
+          fi
+          echo "package.json version matches tag"
+
+  pages:
+    name: Deploy GitHub Pages
+    needs: verify-tag
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -58,11 +86,99 @@ jobs:
           user_name: github-actions[bot]
           user_email: github-actions[bot]@users.noreply.github.com
 
-      - name: Create GitHub release
+  desktop:
+    name: Desktop (${{ matrix.label }})
+    needs: verify-tag
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: macOS
+            os: macos-latest
+          - label: Windows
+            os: windows-latest
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Sync version from package.json
+        run: bun tool/sync-version.ts
+
+      - name: Build Tauri app
+        run: bun run tauri build
+
+      - name: Collect macOS installer artifacts
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          mkdir -p release-assets
+          find src-tauri/target/release/bundle -type f \( -name '*.dmg' -o -name '*.app.tar.gz' -o -name '*.app.zip' \) -exec cp {} release-assets/ \;
+          ls -la release-assets/
+
+      - name: Collect Windows installer artifacts
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          mkdir -p release-assets
+          find src-tauri/target/release/bundle -type f \( -name '*.exe' -o -name '*.msi' \) -exec cp {} release-assets/ \;
+          ls -la release-assets/
+
+      - name: Require at least one installer
+        shell: bash
+        run: |
+          if [ -z "$(ls -A release-assets 2>/dev/null)" ]; then
+            echo "No desktop bundles found"
+            find src-tauri/target/release/bundle -type f 2>/dev/null || true
+            exit 1
+          fi
+
+      - name: Upload desktop artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-${{ matrix.label }}
+          path: release-assets/*
+          if-no-files-found: error
+
+  release:
+    name: Create GitHub release
+    needs: [verify-tag, pages, desktop]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download macOS artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: desktop-macOS
+          path: release-assets
+
+      - name: Download Windows artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: desktop-Windows
+          path: release-assets
+
+      - name: Create release and upload assets
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAG_NAME="${GITHUB_REF#refs/tags/}"
+          TAG_NAME="${{ needs.verify-tag.outputs.tag }}"
           gh release create "$TAG_NAME" \
             --title "$TAG_NAME" \
-            --generate-notes
+            --generate-notes \
+            release-assets/*
