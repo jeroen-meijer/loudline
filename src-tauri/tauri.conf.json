@@ -21,7 +21,8 @@
         "resizable": true,
         "fullscreen": false,
         "dragDropEnabled": true,
-        "backgroundColor": "#0b0d10"
+        "backgroundColor": "#0b0d10",
+        "titleBarStyle": "Transparent"
       }
     ],
     "security": {

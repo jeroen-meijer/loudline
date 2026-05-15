@@ -58,6 +58,29 @@ VITE_BASE_PATH=/loudline/ bun run build && bun run preview
 
 For root user pages (`username.github.io`) leave `VITE_BASE_PATH` unset or set it to `/`.
 
+Production deploys run when you push a **semver tag** on `main` (see [Release](#release) below), not on every merge.
+
+## Contributing
+
+- Open PRs against `main`; use [conventional PR titles](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `chore:`, …).
+- CI (lint + build) and semantic PR title checks must pass.
+- `main` accepts **squash merges** only.
+
+## Release
+
+1. Add changes under `## Upcoming` in `CHANGELOG.md`.
+2. `./tool/prepare_release.sh X.Y.Z` — opens a release PR with version bump and changelog rewrite.
+3. Squash-merge the PR to `main`.
+4. Tag and push (publishes to GitHub Pages and creates a GitHub release):
+
+```bash
+git checkout main && git pull
+git tag X.Y.Z
+git push origin X.Y.Z
+```
+
+See [CLAUDE.md](CLAUDE.md) for full workflow details.
+
 ## CSP / worklet loading
 
 `loudness-worklet` registers its processor via a `blob:` URL by default. If a host serves the site under a strict `Content-Security-Policy` that blocks `blob:` worklets, vendor [`loudness.worklet.js`](https://github.com/lcweden/loudness-worklet/releases) into `public/` and call `audioContext.audioWorklet.addModule('/loudness.worklet.js')` directly (see upstream README).

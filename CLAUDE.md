@@ -29,7 +29,10 @@ Offline EBU R128 loudness metering web app: drag an audio file, see momentary / 
 - `src/lib/platformCopy.ts` — `platformKey(webKey, desktopKey)` for Tauri vs browser wording
 - `src/lib/tauriEnv.ts` — desktop detection, native open dialog, `convertFileSrc`
 - `tool/build-tauri.ts` — version sync + lint + `tauri build`
-- `.github/workflows/deploy-pages.yml` — Pages pipeline (`main` → `pages`)
+- `tool/prepare_release.sh` — open a release PR (changelog + version bump + `gh pr create`)
+- `tool/rewrite_changelog_for_release.sh` — rewrite `CHANGELOG.md` headings for a release
+- `.github/workflows/ci.yml` — lint + build on PRs and `main`
+- `.github/workflows/publish.yml` — tagged release → GitHub Pages + GitHub release
 
 ## Common Commands
 
@@ -57,23 +60,38 @@ bun run tauri:build   # → bun tool/build-tauri.ts (installers under src-tauri/
 
 ## Workflow Rules
 
+- **`main` is protected:** changes land via PR only; merge with **squash**. Required checks: **CI**, **Validate PR Title**.
 - Run `bun run lint` and `bun run build` before pushing.
 - After non-trivial UI changes, smoke-test in the browser (drag a real file in, pan/zoom, hit Space).
 - Production behaviour can differ noticeably from dev for chart performance — prefer `bun run preview` over `bun run dev` when investigating lag.
 
 ## Versioning
 
-- **Canonical version:** `package.json` → `"version"` (currently the only place you edit by hand).
+- **Canonical version:** `package.json` → `"version"`.
 - **Web UI:** Vite injects `VITE_APP_VERSION` from `package.json` at build time (`vite.config.ts` → `src/lib/version.ts` → footer).
-- **Desktop (Tauri):** `src-tauri/tauri.conf.json` and `src-tauri/Cargo.toml` must match; `getVersion()` in the Tauri API reads the bundled app version from that metadata.
-- **Sync script:** `bun tool/sync-version.ts` copies `package.json` → Tauri files. It runs automatically before `bun run tauri:dev` and `bun tool/build-tauri.ts`.
-- **Bump release:** `bun run version:set 0.5.0` (updates `package.json` + Tauri), then update `CHANGELOG.md`, then build.
+- **Desktop (Tauri):** `src-tauri/tauri.conf.json` and `src-tauri/Cargo.toml` must match; synced by `tool/sync-version.ts`.
+- **Ad-hoc bump:** `bun run version:set 0.6.0` (updates `package.json` + Tauri).
+
+## Release workflow
+
+1. Add bullets under `## Upcoming` in `CHANGELOG.md` (newest at top).
+2. Run `./tool/prepare_release.sh X.Y.Z` → release PR (`chore/release-X.Y.Z`).
+3. Merge the PR to `main` (squash) after CI passes.
+4. Tag on `main` and push the tag (triggers `.github/workflows/publish.yml` → GitHub Pages + GitHub release):
+
+   ```bash
+   git checkout main && git pull
+   git tag X.Y.Z
+   git push origin X.Y.Z
+   ```
+
+   Tags may be `X.Y.Z` or `vX.Y.Z`. The tag commit must be on `main`.
 
 ## Changelog Workflow
 
 - All user-visible changes go in `CHANGELOG.md` under `## Upcoming`.
 - New entries are added to the **top** of the `## Upcoming` list.
-- On release, `## Upcoming` becomes the new version heading and a fresh empty `## Upcoming` is added above it (same convention as `in_phase`).
+- On release, `tool/rewrite_changelog_for_release.sh` inserts `## X.Y.Z` under `## Upcoming` and leaves a fresh empty `## Upcoming` (same convention as `in_phase`).
 - Before committing:
   - Run `bun run lint` and `bun run build`.
   - Fix any errors and rerun until clean.
@@ -108,8 +126,8 @@ Branches: `feat/<description>`, `fix/<description>`. Initial / large bootstrap c
 
 ## Deployment Notes
 
-- GitHub Actions builds with Bun and pushes `dist/` to the `pages` branch via `peaceiris/actions-gh-pages@v4` (force-orphaned).
-- Vite base path is driven by `VITE_BASE_PATH` in CI, derived from the repo name.
+- **Production web deploy** runs on **version tags** only (`.github/workflows/publish.yml`), not on every push to `main`.
+- CI builds with Bun, sets `VITE_BASE_PATH=/<repo-name>/`, and pushes `dist/` to the `pages` branch via `peaceiris/actions-gh-pages@v4` (force-orphaned).
 - Live site: `https://jeroen-meijer.github.io/loudline/`.
 
 ## What Not To Add Here
