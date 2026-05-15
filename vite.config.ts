@@ -14,6 +14,9 @@ function pagesBase(): string {
 }
 
 const host = process.env.TAURI_DEV_HOST;
+// Set by the Tauri CLI during `tauri build` / `tauri dev` (see TAURI_ENV_* env vars).
+// Desktop builds use base "/" — do not prefix VITE_BASE_PATH= in tauri.conf beforeBuildCommand
+// (Unix-only syntax breaks Windows CI).
 const isTauri = !!process.env.TAURI_ENV_PLATFORM;
 
 // https://v2.tauri.app/start/frontend/vite/

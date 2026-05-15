@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:tauri": "bun run build",
     "lint": "eslint .",
     "preview": "vite preview",
     "version:sync": "bun tool/sync-version.ts",

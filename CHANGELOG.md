@@ -1,5 +1,7 @@
 ## Upcoming
 
+- fix(ci): Windows Tauri release build — use cross-platform `beforeBuildCommand` (rely on `TAURI_ENV_PLATFORM` for Vite base)
+
 ## 0.5.0
 
 - chore: single source of truth for app version (`package.json` + `tool/sync-version.ts`); version shown in footer
