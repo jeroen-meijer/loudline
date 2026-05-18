@@ -1,5 +1,7 @@
 ## Upcoming
 
+- fix(ci): use POSIX sh in verify_release_publish.sh (dash rejects `${sha:0:7}`)
+
 ## 0.5.3
 
 - ci: publish on squash-merge of release PR (label `release`); tag version after successful release
