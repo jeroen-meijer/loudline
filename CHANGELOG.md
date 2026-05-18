@@ -1,5 +1,7 @@
 ## Upcoming
 
+## 0.5.5
+
 - ci: sign and notarize macOS release builds in publish workflow (Developer ID + App Store Connect API)
 
 ## 0.5.4
