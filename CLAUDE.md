@@ -82,8 +82,6 @@ bun run tauri:build   # → bun tool/build-tauri.ts (installers under src-tauri/
 3. Squash-merge the PR to `main` after CI passes → **Publish Release** runs automatically (Pages, macOS/Windows installers, GitHub release, then git tag `X.Y.Z` on the merge commit).
 4. If publish fails after merge, use Actions → **Publish Release** → **Run workflow** with the same version, or **Re-run failed jobs** on the failed run.
 
-**macOS signed `.dmg` (one-time):** Export Developer ID `.p12` → `APPLE_CERTIFICATE` (base64 via `tool/encode_apple_certificate.sh`), `APPLE_CERTIFICATE_PASSWORD`, `KEYCHAIN_PASSWORD` (random), `APPLE_SIGNING_IDENTITY` (`Developer ID Application: Jeroen Meijer (8Y9VHETSCL)`), App Store Connect API key → `APPLE_API_ISSUER`, `APPLE_API_KEY`, `APPLE_API_KEY_CONTENT` (`.p8` contents). Requires [PR #13](https://github.com/jeroen-meijer/loudline/pull/13) merged.
-
 ## Changelog Workflow
 
 - All user-visible changes go in `CHANGELOG.md` under `## Upcoming`.
