@@ -112,7 +112,21 @@ jobs:
       - name: Sync version from package.json
         run: bun tool/sync-version.ts
 
+      - name: Setup Apple signing
+        if: runner.os == 'macOS'
+        uses: ./.github/actions/setup-apple-signing
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_KEY_CONTENT: ${{ secrets.APPLE_API_KEY_CONTENT }}
+
       - name: Build Tauri app
+        env:
+          APPLE_SIGNING_IDENTITY: ${{ runner.os == 'macOS' && secrets.APPLE_SIGNING_IDENTITY || '' }}
+          APPLE_API_ISSUER: ${{ runner.os == 'macOS' && secrets.APPLE_API_ISSUER || '' }}
+          APPLE_API_KEY: ${{ runner.os == 'macOS' && secrets.APPLE_API_KEY || '' }}
         run: bun run tauri build
 
       - name: Collect macOS installer artifacts
@@ -196,16 +210,17 @@ jobs:
         run: |
           VERSION="${{ needs.verify-release.outputs.version }}"
           SHA="${{ needs.verify-release.outputs.sha }}"
+          short_sha() { printf '%.7s' "$1"; }
           git config user.name github-actions[bot]
           git config user.email github-actions[bot]@users.noreply.github.com
 
           REMOTE_SHA="$(git ls-remote --tags origin "refs/tags/${VERSION}" | awk '{print $1}' | head -1 || true)"
           if [ -n "$REMOTE_SHA" ]; then
             if [ "$REMOTE_SHA" != "$SHA" ]; then
-              echo "error: tag $VERSION on origin points to ${REMOTE_SHA:0:7}, expected ${SHA:0:7}"
+              echo "error: tag $VERSION on origin points to $(short_sha "$REMOTE_SHA"), expected $(short_sha "$SHA")"
               exit 1
             fi
-            echo "Tag $VERSION already on origin at ${SHA:0:7}"
+            echo "Tag $VERSION already on origin at $(short_sha "$SHA")"
             exit 0
           fi
 
