@@ -13,7 +13,7 @@ runs:
       run: |
         set -euo pipefail
         if [ -z "${APPLE_CERTIFICATE:-}" ]; then
-          echo "error: APPLE_CERTIFICATE is not set (add GitHub secret; see docs/macos-signing.md)" >&2
+          echo "error: APPLE_CERTIFICATE is not set (add GitHub secret; see CLAUDE.md Release workflow)" >&2
           exit 1
         fi
         echo "$APPLE_CERTIFICATE" | base64 --decode > "$RUNNER_TEMP/certificate.p12"

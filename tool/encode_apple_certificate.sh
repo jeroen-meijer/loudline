@@ -15,15 +15,12 @@ if [ ! -f "$P12" ]; then
   exit 1
 fi
 
-B64="$(openssl base64 -A -in "$P12")"
-OUT="$(mktemp)"
-printf '%s' "$B64" > "$OUT"
-
 if command -v pbcopy >/dev/null 2>&1; then
-  printf '%s' "$B64" | pbcopy
+  openssl base64 -A -in "$P12" | pbcopy
   echo "Base64 copied to clipboard."
+else
+  openssl base64 -A -in "$P12"
+  echo "(Install pbcopy on macOS to copy to clipboard automatically.)"
 fi
 
-echo "Also saved to: $OUT"
-echo ""
-echo "Add GitHub secret APPLE_CERTIFICATE with this value (or: gh secret set APPLE_CERTIFICATE < \"$OUT\")."
+echo "Set secret: gh secret set APPLE_CERTIFICATE < <(openssl base64 -A -in \"$P12\")"
