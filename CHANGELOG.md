@@ -1,5 +1,7 @@
 ## Upcoming
 
+- ci: require prepended ## Upcoming changelog entries on pull requests
+
 ## 0.5.1
 
 - fix(ci): Windows Tauri release build — use cross-platform `beforeBuildCommand` (rely on `TAURI_ENV_PLATFORM` for Vite base)
