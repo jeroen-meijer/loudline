@@ -76,7 +76,8 @@ jobs:
           grep -q "Notarized Developer ID" spctl-app.txt || grep -q "Developer ID" spctl-app.txt
           if [ -n "$DMG" ]; then
             echo "DMG: $DMG"
-            xcrun stapler validate "$DMG" 2>&1 || true
+            xcrun stapler staple "$DMG"
+            xcrun stapler validate "$DMG"
             spctl -a -vv -t open "$DMG" 2>&1 | tee spctl-dmg.txt
             grep -q "accepted" spctl-dmg.txt
           else
