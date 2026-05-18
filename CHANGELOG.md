@@ -1,5 +1,7 @@
 ## Upcoming
 
+- ci: checkout tag in publish release job so `gh release create --generate-notes` has a git repo
+
 ## 0.5.2
 
 - ci: cache Bun deps and TypeScript build info; tune rust-cache per OS for faster release builds
