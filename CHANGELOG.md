@@ -1,5 +1,7 @@
 ## Upcoming
 
+## 0.5.4
+
 - fix(ci): use POSIX sh in verify_release_publish.sh (dash rejects `${sha:0:7}`)
 
 ## 0.5.3
