@@ -39,6 +39,10 @@ remote_tag_sha() {
   git ls-remote --tags origin "refs/tags/${ver}" 2>/dev/null | awk '{print $1}' | head -1
 }
 
+short_sha() {
+  printf '%.7s' "$1"
+}
+
 EVENT="${RELEASE_EVENT:-}"
 SHA="${RELEASE_SHA:-}"
 
@@ -116,7 +120,7 @@ fi
 EXISTING_TAG_SHA="$(remote_tag_sha "$VERSION" || true)"
 if [ -n "$EXISTING_TAG_SHA" ]; then
   if [ "$EXISTING_TAG_SHA" != "$SHA" ]; then
-    echo "error: tag $VERSION already points to ${EXISTING_TAG_SHA:0:7}, expected ${SHA:0:7}" >&2
+    echo "error: tag $VERSION already points to $(short_sha "$EXISTING_TAG_SHA"), expected $(short_sha "$SHA")" >&2
     exit 1
   fi
   echo "note: tag $VERSION already exists at this commit (retry-safe)"
@@ -130,4 +134,4 @@ fi
 echo "version=$VERSION" >> "${GITHUB_OUTPUT:-/dev/stdout}"
 echo "sha=$SHA" >> "${GITHUB_OUTPUT:-/dev/stdout}"
 echo "tag=$VERSION" >> "${GITHUB_OUTPUT:-/dev/stdout}"
-echo "ok: release $VERSION at ${SHA:0:7}"
+echo "ok: release $VERSION at $(short_sha "$SHA")"
