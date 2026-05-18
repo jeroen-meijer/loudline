@@ -1,6 +1,6 @@
 ## Upcoming
 
-- ci: checkout tag in publish release job so `gh release create --generate-notes` has a git repo
+- ci: publish on squash-merge of release PR (label `release`); tag version after successful release
 
 ## 0.5.2
 
