@@ -82,6 +82,8 @@ bun run tauri:build   # → bun tool/build-tauri.ts (installers under src-tauri/
 3. Squash-merge the PR to `main` after CI passes → **Publish Release** runs automatically (Pages, macOS/Windows installers, GitHub release, then git tag `X.Y.Z` on the merge commit).
 4. If publish fails after merge, use Actions → **Publish Release** → **Run workflow** with the same version, or **Re-run failed jobs** on the failed run.
 
+macOS `.dmg` signing and notarization for CI: [docs/macos-signing.md](docs/macos-signing.md).
+
 ## Changelog Workflow
 
 - All user-visible changes go in `CHANGELOG.md` under `## Upcoming`.

@@ -1,5 +1,7 @@
 ## Upcoming
 
+- ci: sign and notarize macOS release builds in publish workflow (Developer ID + App Store Connect API)
+
 ## 0.5.4
 
 - fix(ci): use POSIX sh in verify_release_publish.sh (dash rejects `${sha:0:7}`)
