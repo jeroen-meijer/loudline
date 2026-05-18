@@ -31,7 +31,7 @@ Offline EBU R128 loudness metering web app: drag an audio file, see momentary / 
 - `tool/build-tauri.ts` — version sync + lint + `tauri build`
 - `tool/prepare_release.sh` — open a release PR (changelog + version bump + `gh pr create`)
 - `tool/rewrite_changelog_for_release.sh` — rewrite `CHANGELOG.md` headings for a release
-- `.github/workflows/ci.yml` — lint + build on PRs (cached Bun deps)
+- `.github/workflows/ci.yml` — lint + build on PRs and `main`
 - `.github/workflows/publish.yml` — tagged release → GitHub Pages + GitHub release
 - `.github/actions/setup-bun-deps` — Bun install + `actions/cache` for `node_modules` / Bun store
 - `.github/actions/setup-rust-tauri` — Rust toolchain + `swatinem/rust-cache` per desktop OS
@@ -62,7 +62,7 @@ bun run tauri:build   # → bun tool/build-tauri.ts (installers under src-tauri/
 
 ## Workflow Rules
 
-- **`main` is protected:** no direct pushes (including admins); changes land via **squash-merge PR** only. Required PR checks: **Lint**, **Build**, **Validate PR Title**. CI runs on pull requests only, not on pushes to `main`.
+- **`main` is protected:** no direct pushes (including admins); changes land via **squash-merge PR** only. Required PR checks: **Lint**, **Build**, **Changelog updated**, **Validate PR Title**. CI runs on pull requests only, not on pushes to `main`.
 - Run `bun run lint` and `bun run build` before pushing.
 - After non-trivial UI changes, smoke-test in the browser (drag a real file in, pan/zoom, hit Space).
 - Production behaviour can differ noticeably from dev for chart performance — prefer `bun run preview` over `bun run dev` when investigating lag.
@@ -92,7 +92,7 @@ bun run tauri:build   # → bun tool/build-tauri.ts (installers under src-tauri/
 ## Changelog Workflow
 
 - All user-visible changes go in `CHANGELOG.md` under `## Upcoming`.
-- New entries are added to the **top** of the `## Upcoming` list.
+- New entries are added to the **top** of the `## Upcoming` list (prepended above existing bullets). CI enforces this (`tool/check_changelog_pr.sh` / `.github/workflows/changelog.yml`). Release branches `chore/release-*` are exempt.
 - On release, `tool/rewrite_changelog_for_release.sh` inserts `## X.Y.Z` under `## Upcoming` and leaves a fresh empty `## Upcoming` (same convention as `in_phase`).
 - Before committing:
   - Run `bun run lint` and `bun run build`.
