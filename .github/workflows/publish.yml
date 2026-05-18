@@ -127,7 +127,6 @@ jobs:
           APPLE_SIGNING_IDENTITY: ${{ runner.os == 'macOS' && secrets.APPLE_SIGNING_IDENTITY || '' }}
           APPLE_API_ISSUER: ${{ runner.os == 'macOS' && secrets.APPLE_API_ISSUER || '' }}
           APPLE_API_KEY: ${{ runner.os == 'macOS' && secrets.APPLE_API_KEY || '' }}
-          APPLE_API_KEY_PATH: ${{ runner.os == 'macOS' && format('{0}/.appstoreconnect/private_keys/AuthKey_{1}.p8', env.HOME, secrets.APPLE_API_KEY) || '' }}
         run: bun run tauri build
 
       - name: Collect macOS installer artifacts
