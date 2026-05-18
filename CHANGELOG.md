@@ -1,5 +1,7 @@
 ## Upcoming
 
+## 0.5.2
+
 - ci: cache Bun deps and TypeScript build info; tune rust-cache per OS for faster release builds
 - ci: require prepended ## Upcoming changelog entries on pull requests
 
