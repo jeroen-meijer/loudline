@@ -58,28 +58,21 @@ VITE_BASE_PATH=/loudline/ bun run build && bun run preview
 
 For root user pages (`username.github.io`) leave `VITE_BASE_PATH` unset or set it to `/`.
 
-Production deploys run when you push a **semver tag** on `main` (see [Release](#release) below), not on every merge.
+Production deploys run when a **release PR** is squash-merged to `main` (see [Release](#release) below), not on every merge.
 
 ## Contributing
 
 - Open PRs against `main`; use [conventional PR titles](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `chore:`, …).
-- Required PR checks: **Lint**, **Build**, **Changelog updated** (prepend bullets under `## Upcoming`), and semantic PR title. CI runs on pull requests only.
+- Required PR checks: **Lint**, **Build**, **Changelog updated** (new bullets prepended under `## Upcoming`), and semantic PR title. CI runs on pull requests only.
 - `main` accepts **squash merges** only; direct pushes are blocked.
 
 ## Release
 
 1. Add changes under `## Upcoming` in `CHANGELOG.md`.
-2. `./tool/prepare_release.sh X.Y.Z` — opens a release PR with version bump and changelog rewrite.
-3. Squash-merge the PR to `main`.
-4. Tag and push (publishes to GitHub Pages, builds macOS/Windows desktop installers, and creates a GitHub release with assets):
+2. `./tool/prepare_release.sh X.Y.Z` — opens a release PR (label `release`) with version bump and changelog rewrite.
+3. Squash-merge the PR to `main` after CI passes — publish runs automatically (GitHub Pages, desktop installers, GitHub release, version tag on the merge commit).
 
-```bash
-git checkout main && git pull
-git tag X.Y.Z
-git push origin X.Y.Z
-```
-
-See [CLAUDE.md](CLAUDE.md) for full workflow details.
+If publish fails, re-run failed jobs on the workflow run or use **Publish Release** → **Run workflow** with the same version. See [CLAUDE.md](CLAUDE.md) for details.
 
 ## CSP / worklet loading
 

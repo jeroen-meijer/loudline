@@ -32,7 +32,8 @@ Offline EBU R128 loudness metering web app: drag an audio file, see momentary / 
 - `tool/prepare_release.sh` — open a release PR (changelog + version bump + `gh pr create`)
 - `tool/rewrite_changelog_for_release.sh` — rewrite `CHANGELOG.md` headings for a release
 - `.github/workflows/ci.yml` — lint + build on PRs and `main`
-- `.github/workflows/publish.yml` — tagged release → GitHub Pages + GitHub release
+- `.github/workflows/publish.yml` — merged release PR → GitHub Pages + GitHub release + version tag
+- `tool/verify_release_publish.sh` — sanity checks before publish (label, branch, version, changelog)
 - `.github/actions/setup-bun-deps` — Bun install + `actions/cache` for `node_modules` / Bun store
 - `.github/actions/setup-rust-tauri` — Rust toolchain + `swatinem/rust-cache` per desktop OS
 
@@ -77,17 +78,9 @@ bun run tauri:build   # → bun tool/build-tauri.ts (installers under src-tauri/
 ## Release workflow
 
 1. Add bullets under `## Upcoming` in `CHANGELOG.md` (newest at top).
-2. Run `./tool/prepare_release.sh X.Y.Z` → release PR (`chore/release-X.Y.Z`).
-3. Merge the PR to `main` (squash) after CI passes.
-4. Tag on `main` and push the tag (triggers `.github/workflows/publish.yml` → GitHub Pages, GitHub release with macOS/Windows desktop installers):
-
-   ```bash
-   git checkout main && git pull
-   git tag X.Y.Z
-   git push origin X.Y.Z
-   ```
-
-   Tags may be `X.Y.Z` or `vX.Y.Z`. The tag commit must be on `main`.
+2. Run `./tool/prepare_release.sh X.Y.Z` → release PR on `chore/release-X.Y.Z` with the **`release`** label.
+3. Squash-merge the PR to `main` after CI passes → **Publish Release** runs automatically (Pages, macOS/Windows installers, GitHub release, then git tag `X.Y.Z` on the merge commit).
+4. If publish fails after merge, use Actions → **Publish Release** → **Run workflow** with the same version, or **Re-run failed jobs** on the failed run.
 
 ## Changelog Workflow
 
@@ -128,7 +121,7 @@ Branches: `feat/<description>`, `fix/<description>`. Initial / large bootstrap c
 
 ## Deployment Notes
 
-- **Production web deploy** runs on **version tags** only (`.github/workflows/publish.yml`), not on every push to `main`.
+- **Production web deploy** runs when a **`release`-labeled** release PR is merged to `main` (`.github/workflows/publish.yml`), not on every push to `main`.
 - CI builds with Bun, sets `VITE_BASE_PATH=/<repo-name>/`, and pushes `dist/` to the `pages` branch via `peaceiris/actions-gh-pages@v4` (force-orphaned).
 - Live site: `https://jeroen-meijer.github.io/loudline/`.
 

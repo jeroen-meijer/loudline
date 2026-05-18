@@ -2,6 +2,9 @@
 # Prepare a release PR: changelog, package.json + Tauri version sync, lint/build, commit, gh pr.
 # Usage: ./tool/prepare_release.sh <x.y.z>
 # Requires: git, gh, bun, awk; run from repo root.
+#
+# Opens a PR labeled "release". Squash-merge to main triggers publish; the workflow
+# tags the merge commit with the version after a successful release.
 
 set -eu
 
@@ -11,6 +14,7 @@ cd "$ROOT"
 CHANGELOG_PATH="CHANGELOG.md"
 PACKAGE_PATH="package.json"
 CHANGELOG_REWRITE_SCRIPT="$ROOT/tool/rewrite_changelog_for_release.sh"
+RELEASE_LABEL="release"
 
 if [ "$#" -ne 1 ]; then
   echo "usage: $0 <x.y.z>" >&2
@@ -22,6 +26,23 @@ echo "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' || {
   echo "error: version must be semver x.y.z (e.g. 1.3.0)" >&2
   exit 2
 }
+
+git fetch origin main --tags
+
+if git ls-remote --exit-code --tags origin "refs/tags/${VERSION}" >/dev/null 2>&1; then
+  echo "error: tag ${VERSION} already exists on origin." >&2
+  exit 1
+fi
+
+if gh release view "$VERSION" >/dev/null 2>&1; then
+  echo "error: GitHub release ${VERSION} already exists." >&2
+  exit 1
+fi
+
+if ! gh label list --json name --jq '.[].name' | grep -qx "$RELEASE_LABEL"; then
+  echo "error: GitHub label \"${RELEASE_LABEL}\" not found. Create it in the repo first." >&2
+  exit 1
+fi
 
 BRANCH="chore/release-${VERSION}"
 if git show-ref --verify --quiet "refs/heads/${BRANCH}"; then
@@ -53,14 +74,11 @@ git push -u origin "$BRANCH"
 
 gh pr create \
   --title "chore: release ${VERSION}" \
+  --label "$RELEASE_LABEL" \
   --body "Prepare release **${VERSION}**: changelog section, \`package.json\` version, and Tauri metadata (via \`tool/sync-version.ts\`).
 
-Merge with **squash** after CI passes. Then tag \`${VERSION}\` on \`main\` and push the tag to publish to GitHub Pages and create a GitHub release:
+Merge with **squash** after CI passes. Merging this PR (with the \`${RELEASE_LABEL}\` label) publishes to GitHub Pages, builds desktop installers, creates a GitHub release, and tags \`main\` with \`${VERSION}\`.
 
-\`\`\`bash
-git checkout main && git pull
-git tag ${VERSION}
-git push origin ${VERSION}
-\`\`\`"
+To retry a failed publish without merging again: Actions → **Publish Release** → **Run workflow** with version \`${VERSION}\`."
 
-echo "Created branch ${BRANCH} and opened a PR."
+echo "Created branch ${BRANCH} and opened a release PR (label: ${RELEASE_LABEL})."
