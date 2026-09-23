@@ -1,5 +1,6 @@
 ## Upcoming
 
+- ci: one-shot workflow that copies Apple signing secrets onto the sift repo (remove after it runs)
 ## 0.5.5
 
 - ci: sign and notarize macOS release builds in publish workflow (Developer ID + App Store Connect API)
