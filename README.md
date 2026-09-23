@@ -63,12 +63,12 @@ Production deploys run when a **release PR** is squash-merged to `main` (see [Re
 ## Contributing
 
 - Open PRs against `main`; use [conventional PR titles](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `chore:`, …).
-- Required PR checks: **Lint**, **Build**, **Changelog updated** (new bullets prepended under `## Upcoming`), and semantic PR title. CI runs on pull requests only.
+- Required PR checks: **Lint**, **Build**, **Changelog updated** (`## Upcoming` must change; edit/merge unshipped bullets as needed), and semantic PR title. CI runs on pull requests only.
 - `main` accepts **squash merges** only; direct pushes are blocked.
 
 ## Release
 
-1. Add changes under `## Upcoming` in `CHANGELOG.md`.
+1. Keep changes under `## Upcoming` in `CHANGELOG.md` as a user-facing draft for the next release.
 2. `./tool/prepare_release.sh X.Y.Z` — opens a release PR (label `release`) with version bump and changelog rewrite.
 3. Squash-merge the PR to `main` after CI passes — publish runs automatically (GitHub Pages, desktop installers, GitHub release, version tag on the merge commit).
 

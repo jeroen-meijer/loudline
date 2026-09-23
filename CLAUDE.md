@@ -77,19 +77,23 @@ bun run tauri:build   # → bun tool/build-tauri.ts (installers under src-tauri/
 
 ## Release workflow
 
-1. Add bullets under `## Upcoming` in `CHANGELOG.md` (newest at top).
+1. Keep `## Upcoming` as a short user-facing draft for the next release (merge unshipped work; see Changelog Workflow).
 2. Run `./tool/prepare_release.sh X.Y.Z` → release PR on `chore/release-X.Y.Z` with the **`release`** label.
 3. Squash-merge the PR to `main` after CI passes → **Publish Release** runs automatically (Pages, macOS/Windows installers, GitHub release, then git tag `X.Y.Z` on the merge commit).
 4. If publish fails after merge, use Actions → **Publish Release** → **Run workflow** with the same version, or **Re-run failed jobs** on the failed run.
 
 ## Changelog Workflow
 
-- All user-visible changes go in `CHANGELOG.md` under `## Upcoming`.
-- New entries are added to the **top** of the `## Upcoming` list (prepended above existing bullets). CI enforces this (`tool/check_changelog_pr.sh` / `.github/workflows/changelog.yml`). Release branches `chore/release-*` are exempt.
+`CHANGELOG.md` → `## Upcoming` is the **user-facing draft for the next release**, not a commit diary.
+
+- Write for someone who installs the next version. Conventional prefixes (`feat` / `fix` / `perf` / …) are fine; the rest of the line should read as a product note.
+- **Unshipped work:** edit or merge existing Upcoming bullets. Do not add `fix(X)` under a `feat(X)` that never left Upcoming. Collapse iterative polish into one bullet.
+- **After a release:** only then does a later bugfix get its own Upcoming line.
+- Prefer fewer, broader bullets over one line per agent session. Skip internal-only churn unless users notice it.
+- Run `/humanize` (or match that skill) on every new or edited Upcoming bullet before you commit. Keep conventional prefixes; the rest should read like a short product note, not a session diary.
+- CI (`tool/check_changelog_pr.sh` / `.github/workflows/changelog.yml`) requires Upcoming to change on a PR; release branches `chore/release-*` are exempt.
 - On release, `tool/rewrite_changelog_for_release.sh` inserts `## X.Y.Z` under `## Upcoming` and leaves a fresh empty `## Upcoming` (same convention as `in_phase`).
-- Before committing:
-  - Run `bun run lint` and `bun run build`.
-  - Fix any errors and rerun until clean.
+- Before committing: run `bun run lint` and `bun run build`; fix until clean.
 
 ## Git Conventions
 
