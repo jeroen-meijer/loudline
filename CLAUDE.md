@@ -97,6 +97,7 @@ bun run tauri:build   # → bun tool/build-tauri.ts (installers under src-tauri/
 - **Unshipped work:** edit or merge existing Upcoming bullets. Do not add `fix(X)` under a `feat(X)` that never left Upcoming. Collapse iterative polish into one bullet.
 - **After a release:** only then does a later bugfix get its own Upcoming line.
 - Prefer fewer, broader bullets over one line per agent session.
+- Blank line after each `##` heading and between release sections; no blank lines between consecutive bullets within a section.
 - Run `/humanize` (or match that skill) on every new or edited Upcoming bullet before you commit. Keep conventional prefixes; the rest should read like a short product note, not a session diary.
 - CI (`tool/check_changelog_pr.sh` / `.github/workflows/changelog.yml`) requires Upcoming to change on every PR (product or docs); release branches `chore/release-*` are exempt.
 - On release, `tool/rewrite_changelog_for_release.sh` inserts `## X.Y.Z` under `## Upcoming` and leaves a fresh empty `## Upcoming` (same convention as `in_phase`).
